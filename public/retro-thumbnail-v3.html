@@ -1,0 +1,790 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Interactive Workbench Thumbnail V3</title>
+    <style>
+      :root {
+        --dark-teal: #074f57;
+        --cerulean: #077187;
+        --muted-teal: #74a57f;
+        --celadon: #9ece9a;
+        --sand: #e4c5af;
+        --sand-light: #f2decc;
+        --paper: #fff8ec;
+        --ink: #111716;
+        --soft-line: #6f8f83;
+        --muted-text: #526962;
+        --action: #000000;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: #d8c2ad;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        display: grid;
+        min-height: 100vh;
+        margin: 0;
+        place-items: center;
+        padding: 28px;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.17) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+          var(--sand);
+        background-size: 42px 42px;
+      }
+
+      .thumbnail {
+        position: relative;
+        width: min(1160px, 100%);
+        min-height: 700px;
+        overflow: hidden;
+        border: 1px solid rgba(7, 79, 87, 0.36);
+        border-radius: 28px;
+        background:
+          radial-gradient(circle at 8% 10%, rgba(158, 206, 154, 0.56), transparent 24%),
+          radial-gradient(circle at 92% 82%, rgba(7, 113, 135, 0.18), transparent 28%),
+          linear-gradient(135deg, #f9ead8 0%, #f3e4d3 48%, #e5d3be 100%);
+        box-shadow: 0 24px 60px rgba(7, 79, 87, 0.2);
+      }
+
+      .thumbnail::before {
+        content: "";
+        position: absolute;
+        inset: -62px auto auto -60px;
+        width: 320px;
+        height: 320px;
+        border-radius: 50%;
+        background:
+          radial-gradient(circle, rgba(7, 79, 87, 0.14) 1px, transparent 1.2px),
+          var(--celadon);
+        background-size: 13px 13px, auto;
+        opacity: 0.9;
+      }
+
+      .thumbnail::after {
+        content: "";
+        position: absolute;
+        right: -96px;
+        bottom: -72px;
+        width: 430px;
+        height: 230px;
+        border-radius: 999px 0 0 0;
+        background:
+          radial-gradient(circle, rgba(255, 248, 236, 0.34) 1px, transparent 1.2px),
+          var(--cerulean);
+        background-size: 12px 12px, auto;
+        opacity: 0.92;
+      }
+
+      .topbar {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        padding: 24px 30px;
+      }
+
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        color: var(--dark-teal);
+        font-size: 0.82rem;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .brand-mark {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        border: 1.5px solid var(--dark-teal);
+        border-radius: 50%;
+        place-items: center;
+        background: var(--paper);
+        box-shadow: 0 5px 12px rgba(7, 79, 87, 0.18);
+      }
+
+      .nav-note {
+        border: 1px solid rgba(7, 79, 87, 0.2);
+        border-radius: 999px;
+        padding: 9px 14px;
+        color: var(--dark-teal);
+        background: rgba(255, 248, 236, 0.72);
+        font-size: 0.82rem;
+        font-weight: 850;
+      }
+
+      .content {
+        position: relative;
+        z-index: 1;
+        display: grid;
+        grid-template-columns: 0.68fr 1.32fr;
+        gap: 28px;
+        padding: 4px 34px 34px;
+      }
+
+      .hero-copy {
+        align-self: center;
+        padding-bottom: 38px;
+      }
+
+      .kicker {
+        display: inline-flex;
+        border-radius: 999px;
+        padding: 9px 13px;
+        color: #ffffff;
+        background: var(--cerulean);
+        box-shadow: 0 8px 18px rgba(7, 113, 135, 0.22);
+        font-size: 0.76rem;
+        font-weight: 950;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        max-width: 430px;
+        margin: 20px 0 0;
+        color: #b63d2d;
+        font-size: clamp(3rem, 5.35vw, 5.35rem);
+        line-height: 0.94;
+        letter-spacing: 0;
+      }
+
+      h1 span {
+        color: var(--cerulean);
+      }
+
+      .hero-copy p {
+        max-width: 420px;
+        margin: 20px 0 0;
+        color: var(--muted-text);
+        font-size: 1.06rem;
+        line-height: 1.55;
+      }
+
+      .flow-note {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        max-width: 400px;
+        margin-top: 26px;
+        border: 1px solid rgba(7, 79, 87, 0.18);
+        border-radius: 18px;
+        padding: 13px 14px;
+        background: rgba(255, 248, 236, 0.7);
+        color: #344b45;
+        font-size: 0.92rem;
+        font-weight: 760;
+        line-height: 1.4;
+      }
+
+      .flow-note strong {
+        display: grid;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        place-items: center;
+        color: #ffffff;
+        background: var(--muted-teal);
+      }
+
+      .studio-card {
+        position: relative;
+        display: grid;
+        grid-template-rows: auto 1fr auto;
+        min-height: 540px;
+        overflow: hidden;
+        border: 1.5px solid rgba(7, 79, 87, 0.4);
+        border-radius: 26px;
+        background: rgba(255, 248, 236, 0.9);
+        box-shadow: 0 20px 46px rgba(7, 79, 87, 0.16);
+      }
+
+      .studio-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 16px;
+        border-bottom: 1px solid rgba(7, 79, 87, 0.22);
+        padding: 16px 18px;
+        background: rgba(158, 206, 154, 0.54);
+      }
+
+      .studio-header strong,
+      .label {
+        color: var(--dark-teal);
+        font-size: 0.79rem;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .status-label {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 8px 11px;
+        color: var(--dark-teal);
+        background: rgba(255, 248, 236, 0.82);
+        font-size: 0.78rem;
+        font-weight: 850;
+      }
+
+      .status-label::before {
+        content: "";
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: var(--muted-teal);
+      }
+
+      .workspace {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        gap: 18px;
+        padding: 20px;
+      }
+
+      .note,
+      .prompt-sheet {
+        border: 1.5px solid rgba(7, 79, 87, 0.28);
+        border-radius: 20px;
+        padding: 18px;
+      }
+
+      .note {
+        position: relative;
+        background:
+          linear-gradient(180deg, rgba(255, 255, 255, 0.28), transparent),
+          #fff4c9;
+        box-shadow: 0 10px 24px rgba(7, 79, 87, 0.1);
+      }
+
+      .note::after {
+        content: "";
+        position: absolute;
+        top: -10px;
+        right: 28px;
+        width: 72px;
+        height: 22px;
+        border-radius: 5px;
+        background: rgba(228, 197, 175, 0.95);
+        box-shadow: 0 5px 12px rgba(7, 79, 87, 0.12);
+        transform: rotate(3deg);
+      }
+
+      .messy-field {
+        position: relative;
+        min-height: 206px;
+        margin-top: 14px;
+      }
+
+      textarea {
+        width: 100%;
+        min-height: 206px;
+        resize: none;
+        border: 1px solid rgba(7, 79, 87, 0.2);
+        border-radius: 16px;
+        padding: 16px;
+        color: var(--ink);
+        background: rgba(255, 248, 236, 0.66);
+        font: inherit;
+        line-height: 1.5;
+        outline: none;
+        transition:
+          border-color 160ms ease,
+          box-shadow 160ms ease,
+          background 160ms ease;
+      }
+
+      textarea:focus {
+        border-color: var(--action);
+        background: #ffffff;
+        box-shadow: 0 0 0 4px rgba(7, 113, 135, 0.12);
+      }
+
+      .animated-placeholder {
+        position: absolute;
+        inset: 16px;
+        color: rgba(7, 79, 87, 0.58);
+        pointer-events: none;
+        line-height: 1.5;
+        transition:
+          opacity 160ms ease,
+          transform 160ms ease;
+      }
+
+      .messy-field:focus-within .animated-placeholder,
+      .messy-field.has-value .animated-placeholder {
+        opacity: 0;
+        transform: translateY(-4px);
+      }
+
+      .cursor {
+        display: inline-block;
+        width: 2px;
+        height: 1em;
+        margin-left: 2px;
+        transform: translateY(2px);
+        background: var(--cerulean);
+        animation: blink 900ms steps(2, start) infinite;
+      }
+
+      @keyframes blink {
+        50% {
+          opacity: 0;
+        }
+      }
+
+      .prompt-sheet {
+        background:
+          radial-gradient(circle at 100% 0, rgba(116, 165, 127, 0.24), transparent 34%),
+          #ffffff;
+      }
+
+      .prompt-sheet p {
+        margin: 14px 0 0;
+        color: #344b45;
+        line-height: 1.5;
+      }
+
+      .meaning-empty {
+        margin: 14px 0 0;
+        color: #526962;
+        line-height: 1.5;
+      }
+
+      .meaning-state {
+        display: none;
+      }
+
+      .meaning-state.is-visible {
+        display: block;
+      }
+
+      .fact-chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .theme-option {
+        border: 1px solid rgba(7, 79, 87, 0.22);
+        border-radius: 999px;
+        padding: 8px 11px;
+        color: var(--dark-teal);
+        background: rgba(158, 206, 154, 0.42);
+        font-size: 0.76rem;
+        font-weight: 850;
+        cursor: pointer;
+        transition:
+          background 140ms ease,
+          border-color 140ms ease,
+          color 140ms ease;
+      }
+
+      .theme-option[aria-pressed="true"] {
+        border-color: var(--dark-teal);
+        color: #ffffff;
+        background: var(--dark-teal);
+      }
+
+      .reanalyze {
+        display: inline-flex;
+        border: 0;
+        margin-top: 14px;
+        padding: 0;
+        color: var(--cerulean);
+        background: transparent;
+        cursor: pointer;
+        font: inherit;
+        font-size: 0.84rem;
+        font-weight: 900;
+      }
+
+      .reanalyze:focus-visible,
+      .theme-option:focus-visible {
+        outline: 3px solid rgba(7, 113, 135, 0.22);
+        outline-offset: 2px;
+      }
+
+      .app-controls {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto;
+        gap: 12px;
+        align-items: center;
+        border-top: 1px solid rgba(7, 79, 87, 0.2);
+        padding: 18px;
+        background: rgba(255, 248, 236, 0.88);
+      }
+
+      .advanced-drawer {
+        align-self: stretch;
+      }
+
+      .advanced-drawer summary {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        border-radius: 999px;
+        padding: 10px 12px;
+        color: var(--dark-teal);
+        background: rgba(255, 255, 255, 0.52);
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 900;
+        list-style: none;
+      }
+
+      .advanced-drawer summary::-webkit-details-marker {
+        display: none;
+      }
+
+      .advanced-drawer summary::before {
+        content: "+";
+        display: grid;
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        place-items: center;
+        color: #ffffff;
+        background: var(--muted-teal);
+        font-size: 0.8rem;
+      }
+
+      .advanced-drawer[open] summary::before {
+        content: "-";
+      }
+
+      .advanced-panel {
+        margin-top: 12px;
+        border: 1px solid rgba(7, 79, 87, 0.16);
+        border-radius: 18px;
+        padding: 12px;
+        background: rgba(255, 255, 255, 0.56);
+      }
+
+      .model-strip {
+        display: flex;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .model {
+        border-radius: 999px;
+        border: 1px solid transparent;
+        padding: 10px 12px;
+        color: #526962;
+        background: rgba(255, 255, 255, 0.48);
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 850;
+      }
+
+      .model.active {
+        border-color: rgba(7, 79, 87, 0.2);
+        color: var(--dark-teal);
+        background: rgba(158, 206, 154, 0.58);
+      }
+
+      .model-note {
+        margin-top: 12px;
+        color: #49605a;
+        font-size: 0.84rem;
+        font-weight: 720;
+        line-height: 1.45;
+      }
+
+      .model-explainer {
+        grid-column: 1 / -1;
+        border: 1px solid rgba(7, 79, 87, 0.16);
+        border-radius: 18px;
+        padding: 14px;
+        color: #38524b;
+        background:
+          radial-gradient(circle at 100% 0, rgba(158, 206, 154, 0.28), transparent 34%),
+          rgba(255, 255, 255, 0.48);
+        font-size: 0.86rem;
+        line-height: 1.45;
+      }
+
+      .model-explainer strong {
+        display: block;
+        margin-bottom: 8px;
+        color: var(--dark-teal);
+        font-size: 0.78rem;
+        font-weight: 950;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .model-explainer ul {
+        display: grid;
+        gap: 6px;
+        margin: 0;
+        padding-left: 18px;
+      }
+
+      .primary-action {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        border: 2px solid var(--action);
+        border-radius: 999px;
+        padding: 15px 23px;
+        color: #ffffff;
+        background: #e94f37;
+        box-shadow:
+          0 12px 24px rgba(233, 79, 55, 0.28),
+          3px 4px 0 rgba(0, 0, 0, 0.22);
+        font-size: 0.95rem;
+        font-weight: 950;
+        letter-spacing: 0.03em;
+        text-transform: uppercase;
+      }
+
+      .primary-action .arrow {
+        display: inline-block;
+        color: #ffffff;
+        font-size: 1.1rem;
+        line-height: 1;
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        .cursor {
+          animation: none;
+        }
+      }
+
+      @media (max-width: 900px) {
+        body {
+          padding: 14px;
+        }
+
+        .content,
+        .workspace {
+          grid-template-columns: 1fr;
+        }
+
+        .thumbnail {
+          min-height: 0;
+        }
+
+        .app-controls {
+          grid-template-columns: 1fr;
+        }
+
+        h1 {
+          font-size: 3rem;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="thumbnail" aria-label="Interactive retro workbench alternate thumbnail">
+      <header class="topbar">
+        <div class="brand">
+          <span class="brand-mark">↗</span>
+          Prompt Architect Studio
+        </div>
+        <div class="nav-note">Only black border = primary action</div>
+      </header>
+
+      <section class="content">
+        <div class="hero-copy">
+          <span class="kicker">Half-formed is fine</span>
+          <h1>Add the mess. Get the <span>ready prompt.</span></h1>
+          <p>
+            A calmer retro workbench with softer outlines, teal-first hierarchy, and one unmistakable action.
+          </p>
+          <div class="flow-note">
+            <strong>1</strong>
+            <span>Click the note, type anything rough, then use the black-bordered Transform button.</span>
+          </div>
+        </div>
+
+        <div class="studio-card">
+          <div class="studio-header">
+            <strong>Prompt workbench</strong>
+            <span class="status-label">Auto Execute</span>
+          </div>
+
+          <div class="workspace">
+            <article class="note">
+              <label class="label" for="messy-note">Add your messy note here</label>
+              <div class="messy-field" id="messy-field">
+                <textarea id="messy-note" aria-label="Add your messy note here"></textarea>
+                <div class="animated-placeholder" id="animated-placeholder">
+                  <span id="placeholder-text"></span><span class="cursor"></span>
+                </div>
+              </div>
+            </article>
+
+            <article class="prompt-sheet">
+              <span class="label">What meaning should we keep?</span>
+              <p class="meaning-empty" id="meaning-empty">
+                Add a messy note and the engine will suggest a few themes. Pick the ones that feel right.
+              </p>
+              <div class="meaning-state" id="meaning-state">
+                <div class="fact-chips" id="theme-options" aria-label="Suggested meaning themes">
+                  <button class="theme-option" type="button" aria-pressed="true">Audience</button>
+                  <button class="theme-option" type="button" aria-pressed="true">Tone</button>
+                  <button class="theme-option" type="button" aria-pressed="false">Budget</button>
+                  <button class="theme-option" type="button" aria-pressed="true">Goal</button>
+                </div>
+                <button class="reanalyze" type="button" id="reanalyze">Reanalyze for meaning</button>
+              </div>
+            </article>
+          </div>
+
+          <div class="app-controls">
+            <details class="advanced-drawer">
+              <summary>Advanced: model tuning</summary>
+              <div class="advanced-panel">
+                <div class="model-strip" aria-label="Model options preview">
+                  <button class="model active" type="button">Works anywhere</button>
+                  <button class="model" type="button">GPT-5.5</button>
+                  <button class="model" type="button">Claude</button>
+                  <button class="model" type="button">Gemini</button>
+                </div>
+                <div class="model-note">
+                  Most people can leave this on Works anywhere. Model tuning changes the seasoning, not the whole meal.
+                </div>
+              </div>
+            </details>
+            <button class="primary-action">
+              Transform Prompt
+              <span class="arrow" aria-hidden="true">→</span>
+            </button>
+            <aside class="model-explainer" aria-label="Model differences">
+              <strong>Model differences, plain English</strong>
+              <ul>
+                <li><b>GPT-5.5:</b> clear hierarchy, deliverables, and step-by-step execution guidance.</li>
+                <li><b>Claude:</b> handles structured tags and nuance especially well.</li>
+                <li><b>Gemini:</b> strong for big context, sections, and table-friendly outputs.</li>
+              </ul>
+            </aside>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script>
+      const ideas = [
+        "Make a funny 4-week newsletter plan for millennial plant parents launching a plant care app.",
+        "Turn messy client notes into a clear 90-day marketing action plan.",
+        "Write a warm launch email for a small accounting SaaS with receipt matching.",
+        "Create an SOP from a scattered process for handling customer returns.",
+      ];
+
+      const textarea = document.querySelector("#messy-note");
+      const field = document.querySelector("#messy-field");
+      const placeholder = document.querySelector("#placeholder-text");
+      const meaningEmpty = document.querySelector("#meaning-empty");
+      const meaningState = document.querySelector("#meaning-state");
+      const themeOptions = Array.from(document.querySelectorAll(".theme-option"));
+      const reanalyze = document.querySelector("#reanalyze");
+      let ideaIndex = 0;
+      let charIndex = 0;
+      let deleting = false;
+      let themeSetIndex = 0;
+
+      const themeSets = [
+        ["Audience", "Tone", "Budget", "Goal"],
+        ["Pain point", "Channel", "Format", "Timeline"],
+        ["User type", "Vibe", "Offer", "Output"],
+      ];
+
+      function showMeaningOptions() {
+        const hasValue = textarea.value.trim().length > 0;
+        meaningEmpty.style.display = hasValue ? "none" : "block";
+        meaningState.classList.toggle("is-visible", hasValue);
+      }
+
+      function renderThemes() {
+        const themes = themeSets[themeSetIndex];
+        themeOptions.forEach((button, index) => {
+          button.textContent = themes[index];
+          button.setAttribute("aria-pressed", index === 2 ? "false" : "true");
+        });
+      }
+
+      function tickPlaceholder() {
+        if (document.activeElement === textarea || textarea.value.length > 0) {
+          window.setTimeout(tickPlaceholder, 180);
+          return;
+        }
+
+        const idea = ideas[ideaIndex];
+
+        if (!deleting) {
+          charIndex += 1;
+          placeholder.textContent = idea.slice(0, charIndex);
+
+          if (charIndex >= idea.length) {
+            deleting = true;
+            window.setTimeout(tickPlaceholder, 1350);
+            return;
+          }
+        } else {
+          charIndex -= 2;
+          placeholder.textContent = idea.slice(0, Math.max(0, charIndex));
+
+          if (charIndex <= 0) {
+            deleting = false;
+            ideaIndex = (ideaIndex + 1) % ideas.length;
+            charIndex = 0;
+          }
+        }
+
+        window.setTimeout(tickPlaceholder, deleting ? 24 : 34);
+      }
+
+      textarea.addEventListener("input", () => {
+        field.classList.toggle("has-value", textarea.value.length > 0);
+        showMeaningOptions();
+      });
+
+      textarea.addEventListener("focus", () => {
+        placeholder.textContent = "";
+      });
+
+      textarea.addEventListener("blur", () => {
+        if (textarea.value.length === 0) {
+          charIndex = 0;
+          deleting = false;
+        }
+      });
+
+      themeOptions.forEach((button) => {
+        button.addEventListener("click", () => {
+          button.setAttribute("aria-pressed", button.getAttribute("aria-pressed") !== "true");
+        });
+      });
+
+      reanalyze.addEventListener("click", () => {
+        themeSetIndex = (themeSetIndex + 1) % themeSets.length;
+        renderThemes();
+      });
+
+      renderThemes();
+      showMeaningOptions();
+      tickPlaceholder();
+    </script>
+  </body>
+</html>

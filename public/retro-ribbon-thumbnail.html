@@ -1,0 +1,418 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Retro Ribbon Thumbnail</title>
+    <style>
+      :root {
+        --coral: #ed6a5a;
+        --lemon: #f4f1bb;
+        --ash: #9bc1bc;
+        --linen: #e6ebe0;
+        --cyan: #36c9c6;
+        --ink: #171c1a;
+        --navy: #253152;
+        --green: #2fa985;
+        --sand: #ded0bd;
+        --paper: #fffaf0;
+        font-family:
+          Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        color: var(--ink);
+        background: var(--sand);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        min-height: 100vh;
+        margin: 0;
+        overflow: hidden;
+        background:
+          linear-gradient(90deg, rgba(255, 255, 255, 0.18) 1px, transparent 1px),
+          linear-gradient(180deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
+          var(--sand);
+        background-size: 44px 44px;
+      }
+
+      .thumbnail {
+        position: relative;
+        min-height: 100vh;
+        overflow: hidden;
+        padding: 22px 36px 32px;
+      }
+
+      .ribbon {
+        position: absolute;
+        right: -130px;
+        top: 40px;
+        width: 780px;
+        height: 390px;
+        border-radius: 50%;
+        border-style: solid;
+        border-width: 32px;
+        transform: rotate(-20deg);
+        filter: drop-shadow(0 18px 16px rgba(23, 28, 26, 0.12));
+      }
+
+      .ribbon.one {
+        border-color: var(--coral);
+      }
+
+      .ribbon.two {
+        right: -90px;
+        top: 82px;
+        width: 680px;
+        height: 310px;
+        border-color: var(--lemon);
+      }
+
+      .ribbon.three {
+        right: -48px;
+        top: 116px;
+        width: 590px;
+        height: 250px;
+        border-color: var(--navy);
+      }
+
+      .ribbon.four {
+        right: -10px;
+        top: 148px;
+        width: 505px;
+        height: 196px;
+        border-color: var(--green);
+      }
+
+      .ribbon-tail {
+        position: absolute;
+        right: -180px;
+        bottom: -48px;
+        width: 680px;
+        height: 240px;
+        border-radius: 999px;
+        background:
+          linear-gradient(
+            180deg,
+            var(--coral) 0 26%,
+            var(--lemon) 26% 42%,
+            var(--navy) 42% 58%,
+            var(--green) 58% 74%,
+            transparent 74%
+          );
+        transform: rotate(-18deg);
+        opacity: 0.96;
+      }
+
+      .topbar {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 18px;
+        font-size: 0.72rem;
+        font-weight: 950;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .logo {
+        display: grid;
+        width: 34px;
+        height: 34px;
+        border: 1.5px solid rgba(23, 28, 26, 0.72);
+        border-radius: 50%;
+        place-items: center;
+        background: rgba(255, 250, 240, 0.42);
+      }
+
+      .nav {
+        display: flex;
+        gap: 34px;
+        color: rgba(23, 28, 26, 0.62);
+      }
+
+      .search {
+        display: flex;
+        align-items: center;
+        border-radius: 999px;
+        background: rgba(255, 250, 240, 0.5);
+      }
+
+      .search span {
+        padding: 9px 36px 9px 14px;
+        color: rgba(23, 28, 26, 0.46);
+        letter-spacing: 0;
+        text-transform: none;
+      }
+
+      .search strong {
+        border-radius: 999px;
+        padding: 10px 20px;
+        color: #ffffff;
+        background: #6c6b69;
+      }
+
+      .hero {
+        position: relative;
+        z-index: 2;
+        display: grid;
+        grid-template-columns: 0.8fr 1.2fr;
+        gap: 24px;
+        min-height: calc(100vh - 78px);
+        align-items: center;
+      }
+
+      .copy {
+        max-width: 520px;
+        padding-left: 18px;
+      }
+
+      .kicker {
+        display: inline-block;
+        margin-bottom: 18px;
+        color: rgba(23, 28, 26, 0.58);
+        font-size: 0.78rem;
+        font-weight: 950;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+      }
+
+      h1 {
+        margin: 0;
+        color: #ffffff;
+        font-family: Georgia, "Times New Roman", serif;
+        font-size: clamp(4.8rem, 10vw, 8.9rem);
+        font-style: italic;
+        font-weight: 900;
+        letter-spacing: -0.03em;
+        line-height: 0.86;
+        text-shadow:
+          0 2px 0 rgba(23, 28, 26, 0.46),
+          5px 6px 0 rgba(23, 28, 26, 0.16);
+      }
+
+      .copy p {
+        max-width: 390px;
+        margin: 26px 0 0;
+        color: rgba(23, 28, 26, 0.72);
+        font-size: 1.05rem;
+        font-weight: 700;
+        line-height: 1.55;
+      }
+
+      .actions {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-top: 34px;
+      }
+
+      .pill {
+        border: 0;
+        border-radius: 999px;
+        padding: 17px 23px;
+        color: #ffffff;
+        box-shadow: 8px 8px 0 rgba(37, 49, 82, 0.2);
+        font-size: 0.94rem;
+        font-weight: 950;
+        letter-spacing: 0.05em;
+        text-transform: uppercase;
+      }
+
+      .pill.coral {
+        background: var(--coral);
+      }
+
+      .pill.green {
+        background: var(--green);
+      }
+
+      .object-wrap {
+        position: relative;
+        min-height: 560px;
+      }
+
+      .prompt-object {
+        position: absolute;
+        right: 96px;
+        top: 88px;
+        width: 258px;
+        min-height: 430px;
+        border-radius: 42px 42px 28px 28px;
+        background:
+          radial-gradient(circle at 50% 42px, rgba(237, 106, 90, 0.12) 0 30px, transparent 31px),
+          linear-gradient(180deg, #ffd9d3 0%, #f3bdb6 100%);
+        box-shadow:
+          0 30px 28px rgba(23, 28, 26, 0.22),
+          inset 0 0 0 2px rgba(23, 28, 26, 0.12);
+        transform: rotate(8deg);
+      }
+
+      .cap {
+        height: 88px;
+        border-radius: 42px 42px 20px 20px;
+        border-bottom: 2px solid rgba(23, 28, 26, 0.12);
+        background:
+          repeating-linear-gradient(90deg, rgba(23, 28, 26, 0.09) 0 3px, transparent 3px 10px),
+          #ffd6d1;
+      }
+
+      .label {
+        margin: 36px 24px 0;
+        border: 2px solid rgba(23, 28, 26, 0.66);
+        border-radius: 12px;
+        padding: 18px 14px;
+        background: rgba(255, 250, 240, 0.72);
+      }
+
+      .label span {
+        color: rgba(23, 28, 26, 0.58);
+        font-size: 0.67rem;
+        font-weight: 950;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+      }
+
+      .label strong {
+        display: block;
+        margin-top: 12px;
+        font-size: 1.36rem;
+        line-height: 1;
+      }
+
+      .label p {
+        margin: 12px 0 0;
+        color: rgba(23, 28, 26, 0.64);
+        font-size: 0.84rem;
+        font-weight: 750;
+        line-height: 1.4;
+      }
+
+      .floating-card {
+        position: absolute;
+        right: 340px;
+        bottom: 52px;
+        width: 260px;
+        border: 2px solid rgba(23, 28, 26, 0.72);
+        border-radius: 24px;
+        padding: 20px;
+        background: rgba(255, 250, 240, 0.9);
+        box-shadow: 10px 12px 0 rgba(37, 49, 82, 0.2);
+        transform: rotate(-4deg);
+      }
+
+      .floating-card strong {
+        display: block;
+        font-size: 0.78rem;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+      }
+
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        margin-top: 14px;
+      }
+
+      .chip {
+        border-radius: 999px;
+        padding: 8px 10px;
+        background: var(--lemon);
+        font-size: 0.74rem;
+        font-weight: 900;
+      }
+
+      .chip:nth-child(2) {
+        background: var(--cyan);
+      }
+
+      .chip:nth-child(3) {
+        color: #ffffff;
+        background: var(--coral);
+      }
+
+      @media (max-width: 900px) {
+        body {
+          overflow: auto;
+        }
+
+        .nav,
+        .search {
+          display: none;
+        }
+
+        .hero {
+          grid-template-columns: 1fr;
+        }
+
+        .object-wrap {
+          min-height: 520px;
+        }
+
+        .prompt-object {
+          right: 48px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main class="thumbnail" aria-label="Retro ribbon concept">
+      <div class="ribbon one"></div>
+      <div class="ribbon two"></div>
+      <div class="ribbon three"></div>
+      <div class="ribbon four"></div>
+      <div class="ribbon-tail"></div>
+
+      <header class="topbar">
+        <div class="logo">↗</div>
+        <nav class="nav" aria-label="Concept navigation">
+          <span>Home</span>
+          <span>How</span>
+          <span>Styles</span>
+          <span>Trust</span>
+          <span>Start</span>
+        </nav>
+        <div class="search"><span>Paste idea...</span><strong>Go</strong></div>
+      </header>
+
+      <section class="hero">
+        <div class="copy">
+          <span class="kicker">Prompt Studio Concept</span>
+          <h1>Prompts for the Soul.</h1>
+          <p>
+            A softer retro look with flowing model ribbons, friendly product-object energy, and less boxed-in interface weight.
+          </p>
+          <div class="actions">
+            <button class="pill coral">Transform Prompt</button>
+            <button class="pill green">Try Example</button>
+          </div>
+        </div>
+
+        <div class="object-wrap">
+          <div class="prompt-object" aria-label="Prompt object">
+            <div class="cap"></div>
+            <div class="label">
+              <span>Execution Engine</span>
+              <strong>Messy → Ready</strong>
+              <p>Fact sheet, tone, model fit, and copy-ready output.</p>
+            </div>
+          </div>
+
+          <aside class="floating-card">
+            <strong>Fact sheet</strong>
+            <div class="chips">
+              <span class="chip">Audience</span>
+              <span class="chip">Tone</span>
+              <span class="chip">Goal</span>
+              <span class="chip">Model</span>
+            </div>
+          </aside>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
