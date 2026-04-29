@@ -85,6 +85,20 @@ Poor generated prompts:
 
 ## Framework Standards
 
+## Academic Integrity Guardrails
+
+When a rough prompt contains classroom or academic signals such as "student," "class," "professor," "teacher," "homework," "assignment," "essay," "paper," "high school," "college," "rubric," "citation," "MLA," or "APA," the generated prompt should shift into learning-support mode.
+
+In learning-support mode, generated prompts should avoid helping users outsource graded work. They should not ask the target model to:
+
+- Write, draft, outline, or structure essays, papers, discussion posts, lab reports, or other academic submissions.
+- Generate thesis statements, topic sentences, body paragraphs, introductions, conclusions, abstracts, titles, or transitions for submission.
+- Provide citations, source lists, bibliographies, works cited entries, quoted evidence, or fabricated references.
+- Solve homework, exam, quiz, worksheet, or take-home problems directly.
+- Impersonate a student voice or create text that can be pasted into a class assignment.
+
+Allowed support includes explaining concepts, clarifying instructions, creating study questions, suggesting reading strategies, giving self-review checklists, giving feedback on a student-provided draft without rewriting it, and showing similar non-assigned examples.
+
 ### Dynamic
 
 Good Dynamic prompts:

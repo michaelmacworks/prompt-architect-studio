@@ -18,6 +18,16 @@ const UNIVERSAL_RULES = [
   "Keep the final prompt ready to paste into the target model and capable of producing a complete answer in one run.",
 ];
 
+const ACADEMIC_INTEGRITY_RULES = [
+  "Treat this as learning support, not assignment completion.",
+  "Do not write, draft, outline, or structure an essay, paper, discussion post, lab report, book report, application essay, or other submit-ready academic work.",
+  "Do not generate thesis statements, topic sentences, body paragraphs, introductions, conclusions, abstracts, titles, or transitions for academic submission.",
+  "Do not provide citations, source lists, bibliographies, works cited entries, quoted evidence, or fabricated references.",
+  "Do not solve homework, exam, quiz, worksheet, or take-home problems directly. Explain the concept, ask guiding questions, or show a similar non-assigned example instead.",
+  "Do not impersonate a student voice or produce text that could be pasted into a class assignment.",
+  "Allowed support: explain concepts, clarify instructions, create study questions, suggest reading strategies, provide self-review checklists, give feedback on a student-provided draft without rewriting it, and guide the learner through their own reasoning.",
+];
+
 const FRAMEWORK_ALIASES = {
   "Auto Execute": "Dynamic",
   "Quick Task": "RTF",
@@ -98,6 +108,77 @@ function truncateValue(value, maxLength = 220) {
 
 function isStyleInstruction(segment) {
   return /\b(?:make it|tone|voice|vibe|style|energy|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
+}
+
+function detectAcademicContext(roughPrompt) {
+  const academicSignals = matchTerms(roughPrompt, [
+    "academic",
+    "academy",
+    "assignment",
+    "book report",
+    "class",
+    "classroom",
+    "college",
+    "course",
+    "discussion post",
+    "essay",
+    "exam",
+    "final paper",
+    "grade",
+    "graded",
+    "high school",
+    "homework",
+    "in class",
+    "lab report",
+    "lesson",
+    "midterm",
+    "paper",
+    "professor",
+    "quiz",
+    "rubric",
+    "school",
+    "student",
+    "students",
+    "teacher",
+    "term paper",
+    "thesis",
+    "university",
+    "worksheet",
+  ]);
+
+  const citationSignals = matchTerms(roughPrompt, [
+    "APA",
+    "bibliography",
+    "citation",
+    "citations",
+    "cite",
+    "cited",
+    "MLA",
+    "references",
+    "sources",
+    "works cited",
+  ]);
+
+  const writingShortcutSignals = matchTerms(roughPrompt, [
+    "draft",
+    "outline",
+    "write",
+    "generate",
+    "solve",
+    "answer",
+    "answers",
+    "complete",
+    "do my",
+  ]);
+
+  const signals = normalizeList([...academicSignals, ...citationSignals]);
+  const shortcutSignals = normalizeList(writingShortcutSignals);
+
+  return {
+    active: signals.length > 0,
+    signals,
+    shortcutSignals,
+  };
 }
 
 function inferObjective(roughPrompt) {
@@ -217,6 +298,12 @@ const DELIVERABLE_PATTERNS = [
   [/\bscript\b/i, "script"],
   [/\boutline\b/i, "outline"],
   [/\barticle\b/i, "article"],
+  [/\bessays?\b/i, "essay"],
+  [/\bpapers?\b/i, "paper"],
+  [/\bdiscussion posts?\b/i, "discussion post"],
+  [/\blab reports?\b/i, "lab report"],
+  [/\bbook reports?\b/i, "book report"],
+  [/\banswers?\b/i, "answers"],
   [/\bmemo\b/i, "memo"],
   [/\bprompt\b/i, "prompt"],
 ];
@@ -321,6 +408,7 @@ function extractSpecificDetails(roughPrompt) {
 
 function inferFactSheet(roughPrompt) {
   const normalized = roughPrompt.toLowerCase();
+  const academicContext = detectAcademicContext(roughPrompt);
   const platforms = uniqueValues(
     matchTerms(roughPrompt, [
       "Shopify",
@@ -373,10 +461,14 @@ function inferFactSheet(roughPrompt) {
         "customer support",
         "ecommerce",
         "creator",
-        "education",
-        "class",
-        "workshop",
-      ]).map(titleCase),
+      "education",
+      "class",
+      "school",
+      "college",
+      "university",
+      "high school",
+      "workshop",
+    ]).map(titleCase),
     ),
   );
   const audiences = uniqueValues(
@@ -391,6 +483,11 @@ function inferFactSheet(roughPrompt) {
       "neighbors",
       "local customers",
       "students",
+      "student",
+      "high school student",
+      "college student",
+      "teacher",
+      "professor",
       "beginners",
       "parents",
       "B2B",
@@ -480,6 +577,8 @@ function inferFactSheet(roughPrompt) {
     ["Primary Intent / Overall Goal", inferObjective(roughPrompt)],
     ["Deliverables / Tasks", listOrFallback(deliverables, "Best-fit work product")],
     ["Task Clauses to Preserve", listOrFallback(taskClauses)],
+    ["Learning Support Boundary", academicContext.active ? "Academic context detected; help the learner understand and practice without drafting, outlining, citing sources, or solving graded work directly." : ""],
+    ["Academic Signals", academicContext.signals.join(", ")],
     ["Platform / Channels", platforms.join(", ")],
     ["Industry / Domain", industries.join(", ")],
     ["Audience", audiences.join(", ")],
@@ -517,13 +616,27 @@ function normalizeFramework(value) {
 }
 
 function baseSections({ roughPrompt, targetModel }) {
+  const academicContext = detectAcademicContext(roughPrompt);
+
   return {
     intent: inferObjective(roughPrompt),
     deliverables: inferDeliverableSummary(roughPrompt),
     factSheet: inferFactSheet(roughPrompt),
+    academicContext,
+    academicRules: academicContext.active ? ACADEMIC_INTEGRITY_RULES.map((rule) => `- ${rule}`).join("\n") : "",
     model: modelGuidance(targetModel),
     rules: UNIVERSAL_RULES.map((rule) => `- ${rule}`).join("\n"),
   };
+}
+
+function academicIntegritySection(sections) {
+  if (!sections.academicContext.active) return "";
+
+  return `
+Learning support boundaries:
+${sections.academicRules}
+
+When these boundaries conflict with requested deliverables, follow the boundaries and provide a learning-safe alternative.`;
 }
 
 function buildDynamicPrompt(input) {
@@ -542,6 +655,7 @@ ${sections.model}
 
 Universal Prompt Architect rules:
 ${sections.rules}
+${academicIntegritySection(sections)}
 
 Your task:
 1. Look past greetings, filler, and setup language to identify the user's real goals, all requested deliverables, audience, constraints, style cues, and likely missing context.
@@ -555,6 +669,7 @@ Response requirements:
 - Include a compact "Assumptions Used" section only when assumptions materially shape the answer; do not replace deliberate ambiguity with generic industry claims.
 - Include a dedicated "Style/Tone" section when the user provides vibe, voice, audience, humor, or brand cues, and use the user's own wording when it carries nuance.
 - Complete every item in "Deliverables / Tasks" and preserve every item in "Specific Source Details" unless it is directly irrelevant.
+- If learning support boundaries are present, satisfy the underlying learning need without generating submit-ready writing, outlines, citations, source lists, or direct answers.
 - Use headings, tables, examples, or checklists only when they improve usability.
 - Include next steps or decision points when the user needs to act.
 - Do not make the user answer setup questions before receiving a useful output.`;
@@ -577,6 +692,8 @@ ${sections.deliverables}
 ## Style/Tone
 Extract all voice, personality, humor, audience, and brand cues from the context. If the user implies a vibe, promote it here as a hard constraint. Preserve source phrases that carry nuance, such as "zippy," "neighborly," or "Gen Z but no slang."
 
+${academicIntegritySection(sections)}
+
 Default style if unspecified:
 Match the user's provided energy. If no energy is provided, be clear, practical, specific, and audience-aware. Prefer concrete examples over abstractions.
 
@@ -596,6 +713,7 @@ Output format:
 - Include assumptions used, not questions, unless execution is impossible.
 - Complete every deliverable in the fact sheet.
 - Apply explicit channels, names, times, objects, quantities, and examples exactly when supplied.
+- If learning support boundaries are present, provide only learning-safe support and do not generate citations, source lists, outlines, or draft academic writing.
 - Preserve the intended vibe as a visible constraint.`;
 }
 
@@ -628,6 +746,7 @@ Return a polished answer with:
 
 Universal Prompt Architect rules:
 ${sections.rules}
+${academicIntegritySection(sections)}
 
 Target model calibration:
 ${sections.model}`;
@@ -666,6 +785,7 @@ ${sections.factSheet}
 
 Universal Prompt Architect rules:
 ${sections.rules}
+${academicIntegritySection(sections)}
 
 Target model calibration:
 ${sections.model}`;
@@ -685,6 +805,7 @@ ${sections.factSheet}
 
 ## Operating Principles
 ${sections.rules}
+${academicIntegritySection(sections)}
 
 ## Style/Tone
 Extract the intended vibe, audience, personality, humor, and brand voice from the starting context. Treat those cues as execution constraints, not background notes.
@@ -703,6 +824,7 @@ Proceed independently. Fill ordinary low-risk gaps with high-probability strateg
 - The answer is ready to use without requiring the user to reformat it.
 - Any assumptions are explicit and minimal.
 - All explicit variables and secondary tasks from the source request are represented in the final answer.
+- If learning support boundaries are present, the final answer supports learning without producing submit-ready academic work, outlines, citations, source lists, or direct solutions.
 - The output matches the selected target model's strengths.
 - The user receives a useful finished result in one run, not a list of homework questions.
 
