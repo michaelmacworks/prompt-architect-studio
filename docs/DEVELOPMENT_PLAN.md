@@ -135,6 +135,62 @@ Improve the generated prompt output so it meets the product quality standards.
 - Add output format consistency.
 - Add tests or fixtures for each framework/model combination.
 
+### Next Sprint: Layered Parser Reconstruction
+
+The next engine sprint should replace one-pass summarization with a layered parse object that reconstructs the user's request as modules.
+
+1. Add a parse object in `functions/api/architect.js` with fields for domain, user context, guardrail mode, intents, tasks, deliverables, constraints, forbidden actions, conditional triggers, entities, variables, and style-by-task.
+2. Implement Layer 1: classify user type and domain before extraction. Narrow academic-integrity guardrails to student or graded-work contexts, while allowing professional research, science, grants, educator-authored materials, and small business training.
+3. Implement Layer 2: extract high-priority constraints and triggers. Move "do not," "don't," "never," "private," "secret," and if/then or threshold rules into dedicated guardrail and trigger blocks.
+4. Implement Layer 3: map variables with sentence buffering. Preserve full clauses around names, places, dates, times, quantities, colors, object descriptions, technical specs, tool names, and platforms so qualifiers and negatives are not clipped.
+5. Implement Layer 4: synthesize persona and style separately from facts. Keep metaphors and vibe cues as style instructions and map them to the relevant task when multiple deliverables exist.
+6. Update prompt builders to render from the parse object instead of calling independent inference helpers directly.
+7. Add stress-test fixtures for academic false positives, professional research, small business training, if/then monitoring tasks, private/secret constraints, multi-deliverable prompts, and task-specific style.
+
+### Layered Parser Acceptance Criteria
+
+- Student guardrails activate for clear student or graded-work contexts, not for professional academic vocabulary alone.
+- Multi-intent requests produce a task array, not a single clipped primary intent.
+- Forbidden actions and private/secret constraints appear in a high-priority guardrails block.
+- Conditional triggers appear in a dedicated rules block.
+- Names, places, times, dates, quantities, and technical specs are preserved with surrounding qualifiers.
+- Style cues are applied to the correct task and are not mixed into factual source details.
+- The final model-specific prompt is rendered from structured modules rather than a compressed summary.
+
+### Following Sprint: Runtime Critique And Repair Loop
+
+After the layered parser exists, add a quality loop that evaluates generated prompts before returning them to the user.
+
+The first version can be deterministic and should not depend on live LLM calls. Its purpose is to catch known failure modes that are already defined in `PROMPT_QUALITY_STANDARDS.md`.
+
+1. Add a critique object in `functions/api/architect.js` with fields for `passed`, `issues`, `severity`, `failureTypes`, and `repairInstructions`.
+2. Run critique after prompt rendering and before returning the response.
+3. Check for missing deliverables, clipped negative constraints, buried conditional triggers, academic false positives, style flattening, invented facts, and missing explicit variables.
+4. Add a repair step for high-priority deterministic issues when the parse object contains the missing or corrected information.
+5. Return or expose critique metadata only in a safe internal/debug form, not as distracting user-facing copy in the MVP UI.
+6. Add fixtures that intentionally fail the first render and verify that the repair step produces a corrected final prompt.
+
+### Runtime Critique Acceptance Criteria
+
+- Generated prompts are checked against the structured parse object before being returned.
+- High-priority constraints and triggers cannot disappear silently.
+- Repair uses known parse data; it does not invent new facts.
+- Critique output identifies failure categories consistently enough to support future trend analysis.
+- The user still receives one clean copy-ready prompt, not a visible debugging report.
+
+### Future Sprint: Continuous Improvement Agent
+
+The long-term product direction is an ongoing prompt quality system, not a static prompt formatter.
+
+Add an offline improvement agent after runtime critique is stable. This agent should review fixture failures, anonymized failure categories, user-approved examples, and the quality standards docs, then propose updates to parser rules, prompt builders, fixtures, and documentation.
+
+Initial rules:
+
+- The improvement agent proposes changes for review before they affect production behavior.
+- It should use rubrics from `PROMPT_QUALITY_STANDARDS.md`, not a vague "make this better" instruction.
+- It should store failure categories rather than raw prompt contents unless explicit user consent and matching privacy language are added.
+- It should create or update tests for every accepted behavior change.
+
 ### Optional LLM Integration
 
 Decision needed:

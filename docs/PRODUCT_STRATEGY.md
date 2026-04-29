@@ -49,6 +49,8 @@ The product promise:
 
 > Paste a rough idea. Choose the shape. Get a prompt that is ready to run.
 
+Long-term, Prompt Architect Studio should become a prompt quality system rather than a static prompt formatter. The engine should parse, render, critique, repair, and learn from anonymized failure patterns so generated prompts improve over time without making the everyday workflow more complicated.
+
 ## 5. Core Workflow
 
 1. User enters a rough prompt.
@@ -140,6 +142,7 @@ In scope:
 - Copyable result block.
 - Cloudflare Pages deployability.
 - Clear product context and design strategy.
+- Internal deterministic quality checks for generated prompt output when practical.
 
 Out of scope for the first MVP:
 
@@ -150,6 +153,8 @@ Out of scope for the first MVP:
 - Prompt marketplace.
 - Multi-step onboarding.
 - Complex dashboard navigation.
+- Autonomous production self-modification.
+- Storing raw prompts for model improvement without explicit consent and privacy language.
 
 ## 10. Next Design Step
 

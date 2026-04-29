@@ -107,56 +107,40 @@ function truncateValue(value, maxLength = 220) {
 }
 
 function isStyleInstruction(segment) {
-  return /\b(?:make it|tone|voice|vibe|style|energy|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
+  return /\b(?:make it|keep it|tone|voice|vibe|style|energy|should sound|should be|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
 }
 
 function detectAcademicContext(roughPrompt) {
-  const academicSignals = matchTerms(roughPrompt, [
-    "academic",
-    "academy",
-    "assignment",
-    "book report",
-    "class",
-    "classroom",
-    "college",
-    "course",
-    "discussion post",
-    "essay",
-    "exam",
-    "final paper",
-    "grade",
-    "graded",
-    "high school",
-    "homework",
-    "in class",
-    "lab report",
-    "lesson",
-    "midterm",
-    "paper",
-    "professor",
-    "quiz",
-    "rubric",
-    "school",
-    "student",
-    "students",
-    "teacher",
-    "term paper",
-    "thesis",
-    "university",
-    "worksheet",
+  const studentSignals = matchPhrases(roughPrompt, [
+    /\bmy\s+(?:assignment|homework|essay|paper|discussion post|lab report|book report|worksheet|quiz|exam|midterm|final|professor|teacher|class|course|rubric|grade)\b/i,
+    /\b(?:for|in)\s+my\s+(?:class|course|school|college|university|high school)\b/i,
+    /\b(?:grade|graded|quiz|exam|worksheet|rubric)\b/i,
+    /\b(?:high school|college|university)\s+student\b/i,
+    /\bessay\s+for\s+class\b/i,
   ]);
 
   const citationSignals = matchTerms(roughPrompt, [
     "APA",
-    "bibliography",
-    "citation",
-    "citations",
-    "cite",
-    "cited",
     "MLA",
-    "references",
-    "sources",
     "works cited",
+  ]);
+
+  const professionalSignals = matchTerms(roughPrompt, [
+    "professional research",
+    "research team",
+    "grant",
+    "grant writing",
+    "lab operations",
+    "scientific",
+    "science",
+    "curriculum",
+    "lesson plan",
+    "educator",
+    "teacher-authored",
+    "small business",
+    "training",
+    "workshop",
+    "client",
   ]);
 
   const writingShortcutSignals = matchTerms(roughPrompt, [
@@ -171,13 +155,23 @@ function detectAcademicContext(roughPrompt) {
     "do my",
   ]);
 
-  const signals = normalizeList([...academicSignals, ...citationSignals]);
+  const signals = normalizeList([...studentSignals, ...citationSignals]);
   const shortcutSignals = normalizeList(writingShortcutSignals);
+  const professionalContext = professionalSignals.length > 0;
+  const negatedStudentContext = /\bnot\s+(?:a\s+)?(?:student|student work|student homework|homework|graded work|for class)\b/i.test(roughPrompt);
+  const clearStudentContext = /\b(?:my\s+(?:assignment|homework|essay|paper|discussion post|lab report|book report|worksheet|quiz|exam|midterm|final|professor|teacher|class|course|rubric|grade)|(?:high school|college|university)\s+student|essay\s+for\s+class|graded\s+(?:essay|paper|assignment|work))\b/i.test(
+    roughPrompt,
+  );
+  const active =
+    signals.length > 0 &&
+    !negatedStudentContext &&
+    (!professionalContext || clearStudentContext);
 
   return {
-    active: signals.length > 0,
+    active,
     signals,
     shortcutSignals,
+    professionalSignals: normalizeList(professionalSignals),
   };
 }
 
@@ -262,10 +256,14 @@ function titleCase(value) {
 }
 
 const DELIVERABLE_PATTERNS = [
+  [/\bcustomer repl(?:y|ies)\b/i, "customer reply"],
   [/\bfacebook post\b/i, "Facebook post"],
+  [/\binstagram caption\b/i, "Instagram caption"],
   [/\binstagram post\b/i, "Instagram post"],
   [/\blinkedin post\b/i, "LinkedIn post"],
   [/\btiktok script\b/i, "TikTok script"],
+  [/\bslack monitoring prompt\b/i, "Slack monitoring prompt"],
+  [/\balert prompt\b/i, "alert prompt"],
   [/\bfollow-up email\b/i, "follow-up email"],
   [/\bnext steps?\b/i, "next steps"],
   [/\ba few tips?\b|\btips?\b/i, "tips"],
@@ -282,6 +280,7 @@ const DELIVERABLE_PATTERNS = [
   [/\btaglines?\b/i, "taglines"],
   [/\bsteps?\b/i, "steps"],
   [/\bautomation prompt\b/i, "automation prompt"],
+  [/\blesson plan\b/i, "lesson plan"],
   [/\bnewsletter\b/i, "newsletter plan"],
   [/\bemail\b/i, "email"],
   [/\bcaption\b/i, "caption"],
@@ -291,8 +290,9 @@ const DELIVERABLE_PATTERNS = [
   [/\bsop\b/i, "SOP"],
   [/\bmeeting notes\b/i, "meeting summary"],
   [/\bexecutive update\b/i, "executive update"],
+  [/\bboard update\b/i, "board update"],
   [/\bresearch\b/i, "research brief"],
-  [/\bcomparison\b/i, "comparison"],
+  [/\bcomparison\b|\bcomparing\b|\bcompare\b/i, "comparison"],
   [/\bplan\b/i, "plan"],
   [/\bstrategy\b/i, "strategy"],
   [/\bscript\b/i, "script"],
@@ -374,7 +374,9 @@ function extractNamedDetails(roughPrompt) {
     "Airtable",
   ]);
   const capitalizedPhrases = extractRegexValues(roughPrompt, [
+    /\b(?:[A-Z][A-Za-z0-9]+|[A-Z]{2,}|\d+[A-Za-z]*)(?:\s+(?:[A-Z][A-Za-z0-9]+|[A-Z]{2,}|\d+[A-Za-z]*)){1,5}\b/g,
     /\b(?:[A-Z][a-z0-9]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z0-9]+|[A-Z]{2,}|[&-])){1,4}\b/g,
+    /\b[A-Z][a-z0-9]+\s+(?:team|department|group|unit)\b/g,
   ]).filter((phrase) => !stopPhrases.has(phrase));
 
   return normalizeList([...capitalizedPhrases, ...extractQuotedPhrases(roughPrompt)]);
@@ -382,16 +384,23 @@ function extractNamedDetails(roughPrompt) {
 
 function extractTimeDetails(roughPrompt) {
   return extractRegexValues(roughPrompt, [
+    /\bnext\s+(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)(?:\s+(?:morning|afternoon|evening|night))?\b/gi,
     /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(?:morning|afternoon|evening|night|\d{1,2}(?::\d{2})?\s*(?:am|pm)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\b/gi,
+    /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\b/gi,
     /\b(?:today|tomorrow|tonight|this\s+(?:morning|afternoon|evening|week|month|quarter|year)|next\s+(?:week|month|quarter|year))\b/gi,
     /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi,
+    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi,
     /\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:am|pm)?\b/gi,
   ]);
 }
 
 function extractObjectDetails(roughPrompt) {
+  const colorPattern =
+    "lime green|dark green|light green|forest green|navy blue|sky blue|royal blue|bright red|deep red|hot pink|pale pink|bright yellow|gold|orange|purple|black|white|gray|grey|silver|wood|metal|marble|retro|vintage|modern|1970s|80s|90s";
+
   return extractRegexValues(roughPrompt, [
     /\b(?:lime green|dark green|light green|forest green|navy blue|sky blue|royal blue|bright red|deep red|hot pink|pale pink|bright yellow|gold|orange|purple|black|white|gray|grey|silver|wood|metal|marble|retro|vintage|modern|1970s|80s|90s)\s+[a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,3}\b/gi,
+    new RegExp(`\\b[a-z][a-z0-9-]*(?:\\s+[a-z][a-z0-9-]*){0,2}\\s+(?:is|are|should be)\\s+(?:${colorPattern})\\b`, "gi"),
     /\b\d+(?:\.\d+)?\s*(?:x|by)\s*\d+(?:\.\d+)?\s*(?:inch|inches|ft|feet|cm|mm|px)?\b/gi,
   ]);
 }
@@ -402,11 +411,180 @@ function extractSpecificDetails(roughPrompt) {
       ...extractNamedDetails(roughPrompt),
       ...extractTimeDetails(roughPrompt),
       ...extractObjectDetails(roughPrompt),
+      ...extractQuantityDetails(roughPrompt),
     ]),
   );
 }
 
-function inferFactSheet(roughPrompt) {
+function extractQuantityDetails(roughPrompt) {
+  return extractRegexValues(roughPrompt, [
+    /\b\d+(?:\.\d+)?\s*(?:%|percent|dollars?|usd|hours?|days?|weeks?|months?|years?|people|users|customers|clients|posts?|emails?|pages?|words?|characters?|items?|units?|degrees?|°[CF]?)\b/gi,
+    /\$\s?\d[\d,]*(?:\.\d{2})?\b/g,
+    /\b(?:under|below|less than|over|above|more than|at least|no more than)\s+\$?\d[\d,]*(?:\.\d+)?\b/gi,
+  ]);
+}
+
+function extractConstraintClauses(roughPrompt) {
+  return normalizeList(
+    splitPromptSegments(roughPrompt).filter((segment) =>
+      /\b(?:do not|don't|dont|never|avoid|without|no\s+\w+|private|secret|confidential|do not share|do not cite|don't cite)\b/i.test(segment),
+    ),
+  );
+}
+
+function extractForbiddenActions(roughPrompt) {
+  return normalizeList(
+    extractConstraintClauses(roughPrompt).filter((segment) =>
+      /\b(?:do not|don't|dont|never|avoid|without|no\s+\w+|private|secret|confidential)\b/i.test(segment),
+    ),
+  );
+}
+
+function extractConditionalTriggers(roughPrompt) {
+  return normalizeList(
+    splitPromptSegments(roughPrompt).filter((segment) =>
+      /\b(?:if|when|unless|whenever|alert|notify|trigger|threshold|above|below|greater than|less than|over|under|at least|no more than)\b/i.test(segment),
+    ),
+  );
+}
+
+function inferDomain(roughPrompt) {
+  const domains = removeSubsumedValues(
+    uniqueValues(
+      matchTerms(roughPrompt, [
+        "B2B software",
+        "software",
+        "artisanal candles",
+        "plant care",
+        "accounting SaaS",
+        "SaaS",
+        "small business",
+        "local business",
+        "bakery",
+        "restaurant",
+        "coffee shop",
+        "yoga studio",
+        "landscaping",
+        "home services",
+        "retail",
+        "online shop",
+        "consulting",
+        "manufacturing",
+        "customer support",
+        "ecommerce",
+        "creator",
+        "education",
+        "research",
+        "science",
+        "grant",
+        "training",
+      ]).map(titleCase),
+    ),
+  );
+
+  return domains.length ? domains.join(", ") : "Not specified";
+}
+
+function inferUserContext(roughPrompt, academicContext = detectAcademicContext(roughPrompt)) {
+  if (academicContext.active) {
+    return {
+      type: "student_or_graded_work",
+      signals: academicContext.signals,
+    };
+  }
+
+  if (academicContext.professionalSignals.length) {
+    return {
+      type: "professional_or_educator_context",
+      signals: academicContext.professionalSignals,
+    };
+  }
+
+  return {
+    type: "general_user",
+    signals: [],
+  };
+}
+
+function inferStyleByTask(roughPrompt, taskClauses) {
+  const styleClauses = normalizeList(splitPromptSegments(roughPrompt).filter(isStyleInstruction));
+
+  if (!styleClauses.length) return [];
+
+  const tasks = taskClauses.length ? taskClauses : [inferObjective(roughPrompt)];
+  return tasks.map((task) => ({
+    task,
+    style: styleClauses.join("; "),
+  }));
+}
+
+function createParseObject(roughPrompt) {
+  const academicContext = detectAcademicContext(roughPrompt);
+  const taskClauses = inferTaskClauses(roughPrompt);
+  const deliverables = inferDeliverable(roughPrompt, taskClauses);
+  const objective = inferObjective(roughPrompt);
+  const constraints = extractConstraintClauses(roughPrompt);
+  const forbiddenActions = extractForbiddenActions(roughPrompt);
+  const conditionalTriggers = extractConditionalTriggers(roughPrompt);
+  const platforms = uniqueValues(
+    matchTerms(roughPrompt, [
+      "Shopify",
+      "Instagram",
+      "Instagram DMs",
+      "Facebook",
+      "Facebook Groups",
+      "TikTok",
+      "LinkedIn",
+      "YouTube",
+      "Pinterest",
+      "Twitter",
+      "Threads",
+      "Slack",
+      "Notion",
+      "HubSpot",
+      "Salesforce",
+      "Klaviyo",
+      "Mailchimp",
+      "Google Sheets",
+      "Airtable",
+      "website",
+      "blog",
+      "SMS",
+    ]),
+  );
+  const entities = extractNamedDetails(roughPrompt);
+  const variables = removeSubsumedValues(
+    normalizeList([
+      ...entities,
+      ...extractTimeDetails(roughPrompt),
+      ...extractObjectDetails(roughPrompt),
+      ...extractQuantityDetails(roughPrompt),
+      ...platforms,
+    ]),
+  );
+
+  return {
+    domain: inferDomain(roughPrompt),
+    userContext: inferUserContext(roughPrompt, academicContext),
+    guardrailMode: academicContext.active ? "student_learning_support" : "standard",
+    intents: normalizeList(taskClauses.length ? taskClauses : [objective]),
+    tasks: normalizeList(taskClauses.length ? taskClauses : [objective]).map((task) => ({
+      task,
+      deliverables: inferDeliverable(task),
+    })),
+    deliverables,
+    constraints,
+    forbiddenActions,
+    conditionalTriggers,
+    entities,
+    variables,
+    styleByTask: inferStyleByTask(roughPrompt, taskClauses),
+    academicSignals: academicContext.signals,
+    professionalSignals: academicContext.professionalSignals,
+  };
+}
+
+function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
   const normalized = roughPrompt.toLowerCase();
   const academicContext = detectAcademicContext(roughPrompt);
   const platforms = uniqueValues(
@@ -569,8 +747,8 @@ function inferFactSheet(roughPrompt) {
   );
   const budgetMatch = roughPrompt.match(/(?:under|below|less than|budget of|budget:?)\s*\$?\s*[\d,]+/i);
   const cadenceMatch = roughPrompt.match(/\b\d+\s*[- ]?(?:week|day|month|part|step)s?\b/i);
-  const taskClauses = inferTaskClauses(roughPrompt);
-  const deliverables = inferDeliverable(roughPrompt, taskClauses);
+  const taskClauses = parse.intents;
+  const deliverables = parse.deliverables;
   const specificDetails = extractSpecificDetails(roughPrompt);
 
   const facts = [
@@ -579,17 +757,21 @@ function inferFactSheet(roughPrompt) {
     ["Task Clauses to Preserve", listOrFallback(taskClauses)],
     ["Learning Support Boundary", academicContext.active ? "Academic context detected; help the learner understand and practice without drafting, outlining, citing sources, or solving graded work directly." : ""],
     ["Academic Signals", academicContext.signals.join(", ")],
+    ["Guardrail Mode", parse.guardrailMode],
+    ["Forbidden Actions", listOrFallback(parse.forbiddenActions)],
+    ["Conditional Triggers / Rules", listOrFallback(parse.conditionalTriggers)],
     ["Platform / Channels", platforms.join(", ")],
-    ["Industry / Domain", industries.join(", ")],
+    ["Industry / Domain", parse.domain !== "Not specified" ? parse.domain : industries.join(", ")],
     ["Audience", audiences.join(", ")],
-    ["Specific Source Details", listOrFallback(specificDetails)],
+    ["Specific Source Details", listOrFallback(removeSubsumedValues(normalizeList([...specificDetails, ...parse.variables])))],
     ["Pain Point", painPoints.join(", ")],
-    ["Constraints", constraints.join(", ")],
+    ["Constraints", listOrFallback(normalizeList([...constraints, ...parse.constraints]))],
     ["Budget", budgetMatch?.[0]],
     ["Cadence / Scope", cadenceMatch?.[0]],
     ["Style / Tone", tone.join(", ")],
     ["Voice / Vibe Signals", vibeSignals.join(", ")],
     ["Style Guardrails", styleGuardrails.join(", ")],
+    ["Style By Task", listOrFallback(parse.styleByTask.map(({ task, style }) => `${task}: ${style}`))],
   ];
 
   return facts
@@ -616,12 +798,19 @@ function normalizeFramework(value) {
 }
 
 function baseSections({ roughPrompt, targetModel }) {
-  const academicContext = detectAcademicContext(roughPrompt);
+  const parse = createParseObject(roughPrompt);
+  const academicContext = {
+    active: parse.guardrailMode === "student_learning_support",
+    signals: parse.academicSignals,
+    shortcutSignals: detectAcademicContext(roughPrompt).shortcutSignals,
+    professionalSignals: parse.professionalSignals,
+  };
 
   return {
-    intent: inferObjective(roughPrompt),
-    deliverables: inferDeliverableSummary(roughPrompt),
-    factSheet: inferFactSheet(roughPrompt),
+    parse,
+    intent: parse.intents.length > 1 ? `Complete a multi-part request: ${parse.intents.join("; ")}` : parse.intents[0],
+    deliverables: parse.deliverables.length ? parse.deliverables.join("; ") : "best-fit work product",
+    factSheet: inferFactSheet(roughPrompt, parse),
     academicContext,
     academicRules: academicContext.active ? ACADEMIC_INTEGRITY_RULES.map((rule) => `- ${rule}`).join("\n") : "",
     model: modelGuidance(targetModel),
@@ -860,10 +1049,173 @@ Use the following structured prompt. Think through the task step by step interna
 ${prompt}`;
 }
 
-function architectPrompt(payload) {
+function includesApproximate(haystack, needle) {
+  const normalizedHaystack = String(haystack || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  const normalizedNeedle = String(needle || "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+
+  if (!normalizedNeedle) return true;
+  if (normalizedHaystack.includes(normalizedNeedle)) return true;
+
+  const meaningfulWords = normalizedNeedle
+    .split(" ")
+    .filter((word) => word.length > 3)
+    .slice(0, 6);
+
+  return meaningfulWords.length > 0 && meaningfulWords.every((word) => normalizedHaystack.includes(word));
+}
+
+function createCritiqueIssue(type, severity, message, repairInstruction) {
+  return {
+    type,
+    severity,
+    message,
+    repairInstruction,
+  };
+}
+
+function critiquePrompt(prompt, parse) {
+  const issues = [];
+
+  parse.deliverables.forEach((deliverable) => {
+    if (!includesApproximate(prompt, deliverable)) {
+      issues.push(
+        createCritiqueIssue(
+          "missing_deliverable",
+          "medium",
+          `Missing required deliverable: ${deliverable}.`,
+          `Add ${deliverable} to the required deliverables.`,
+        ),
+      );
+    }
+  });
+
+  parse.forbiddenActions.forEach((constraint) => {
+    if (!includesApproximate(prompt, constraint)) {
+      issues.push(
+        createCritiqueIssue(
+          "constraint_clipped",
+          "high",
+          `Missing or clipped forbidden-action constraint: ${constraint}.`,
+          `Restore this as a high-priority guardrail: ${constraint}.`,
+        ),
+      );
+    }
+  });
+
+  parse.conditionalTriggers.forEach((trigger) => {
+    if (!includesApproximate(prompt, trigger)) {
+      issues.push(
+        createCritiqueIssue(
+          "missed_conditional_trigger",
+          "high",
+          `Missing conditional trigger or alert rule: ${trigger}.`,
+          `Restore this as a conditional rule: ${trigger}.`,
+        ),
+      );
+    }
+  });
+
+  parse.variables.forEach((variable) => {
+    if (!includesApproximate(prompt, variable)) {
+      issues.push(
+        createCritiqueIssue(
+          "variable_dropped",
+          "medium",
+          `Missing explicit source variable: ${variable}.`,
+          `Restore this source detail: ${variable}.`,
+        ),
+      );
+    }
+  });
+
+  parse.styleByTask.forEach(({ task, style }) => {
+    if (!includesApproximate(prompt, style)) {
+      issues.push(
+        createCritiqueIssue(
+          "style_flattened",
+          "medium",
+          `Missing task-specific style for "${task}": ${style}.`,
+          `Apply this style to "${task}": ${style}.`,
+        ),
+      );
+    }
+  });
+
+  if (parse.guardrailMode === "standard" && /(?:^|\n)(?:Learning support boundaries:|- Guardrail Mode: student_learning_support)|submit-ready academic work/i.test(prompt)) {
+    issues.push(
+      createCritiqueIssue(
+        "academic_false_positive",
+        "high",
+        "Academic guardrails appeared even though the parse object is in standard mode.",
+        "Remove student-learning boundaries unless the request is clearly student or graded-work context.",
+      ),
+    );
+  }
+
+  return {
+    passed: issues.length === 0,
+    issues,
+    failureTypes: normalizeList(issues.map((issue) => issue.type)),
+    repairInstructions: issues.map((issue) => issue.repairInstruction),
+  };
+}
+
+function repairPrompt(prompt, parse, critique) {
+  const repairableIssues = critique.issues.filter((issue) => ["high", "medium"].includes(issue.severity));
+  if (!repairableIssues.length) return prompt;
+
+  const additions = [];
+  const hasIssue = (type) => repairableIssues.some((issue) => issue.type === type);
+
+  if (hasIssue("missing_deliverable") && parse.deliverables.length) {
+    additions.push(`Required deliverables to preserve:\n${parse.deliverables.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("constraint_clipped") && parse.forbiddenActions.length) {
+    additions.push(`High-priority guardrails:\n${parse.forbiddenActions.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("missed_conditional_trigger") && parse.conditionalTriggers.length) {
+    additions.push(`Conditional rules and triggers:\n${parse.conditionalTriggers.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("variable_dropped") && parse.variables.length) {
+    additions.push(`Explicit source variables to preserve:\n${parse.variables.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("style_flattened") && parse.styleByTask.length) {
+    additions.push(
+      `Task-specific style instructions:\n${parse.styleByTask
+        .map(({ task, style }) => `- ${task}: ${style}`)
+        .join("\n")}`,
+    );
+  }
+
+  if (hasIssue("academic_false_positive")) {
+    additions.push("Academic guardrail correction:\n- Do not apply student-learning boundaries unless the request clearly involves student or graded-work context.");
+  }
+
+  if (!additions.length) return prompt;
+
+  return `${prompt}
+
+Quality repair additions:
+${additions.join("\n\n")}`;
+}
+
+export function architectPrompt(payload) {
   const roughPrompt = normalizePrompt(payload.roughPrompt);
   const framework = normalizeFramework(payload.framework);
   const targetModel = String(payload.targetModel || "");
+  const includeMeta = payload.includeMeta === true;
 
   if (roughPrompt.length < 8) {
     return { error: "Enter a rough prompt with at least 8 characters." };
@@ -885,12 +1237,27 @@ function architectPrompt(payload) {
     RASC: buildRascPrompt,
     "Agentic-Goal": buildAgenticGoalPrompt,
   };
+  const parse = createParseObject(roughPrompt);
+  const renderedPrompt = formatForTargetModel(builders[framework](input), targetModel);
+  const critique = critiquePrompt(renderedPrompt, parse);
+  const repairedPrompt = repairPrompt(renderedPrompt, parse, critique);
+  const finalCritique = repairedPrompt === renderedPrompt ? critique : critiquePrompt(repairedPrompt, parse);
 
-  return {
-    prompt: formatForTargetModel(builders[framework](input), targetModel),
+  const result = {
+    prompt: repairedPrompt,
     framework,
     targetModel,
   };
+
+  if (includeMeta) {
+    result.meta = {
+      parse,
+      critique: finalCritique,
+      repaired: repairedPrompt !== renderedPrompt,
+    };
+  }
+
+  return result;
 }
 
 export async function onRequestPost(context) {

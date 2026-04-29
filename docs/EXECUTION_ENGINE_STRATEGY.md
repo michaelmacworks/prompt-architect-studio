@@ -74,6 +74,103 @@ The distillation layer should act like an architect, not a summarizer:
 - Keep "Deliverables / Tasks" synchronized with "Task Clauses to Preserve." If a preserved clause mentions a checklist, FAQ, template, bullet points, tips, joke, recommendations, or other output, that item should also appear in the deliverables list.
 - Preserve precise style phrases such as "Brooklyn Sister" or "1970s disaster" instead of reducing them to generic warmth or professionalism.
 
+## Layered Parsing Framework
+
+The prompt engine should move from summarization to modular reconstruction. Its job is not to shorten the user's messy request. Its job is to categorize every actionable item, variable, constraint, trigger, and style instruction so the final prompt respects what the user actually said.
+
+The parser should run in layers before rendering the final model-specific prompt.
+
+### Layer 1: Intent Classification And Domain Weighting
+
+Before extracting details, classify what kind of request this is.
+
+- Use a multi-intent array instead of a single primary intent.
+- Rank high-level action verbs such as "build," "monitor," "write," "draft," "compare," and "analyze" above conversational filler such as "checking," "tell me if," or "quick question."
+- Detect user context before applying academic-integrity guardrails. Student or graded-work markers such as "my assignment," "grade," "homework," "class," "high school student," or "my professor" should activate guardrails. Professional research, grant writing, lab operations, small business training, or educator-authored materials should not be safe-washed by student guardrails.
+- Preserve emergency or setup language as context, but do not let it replace the holistic execution goal.
+
+### Layer 2: Constraint And Trigger Extraction
+
+Security and rules-of-engagement must be extracted separately from task wording.
+
+- Move negative constraints beginning with "do not," "don't," "never," "avoid," "secret," "private," or equivalent language into a high-priority guardrails block.
+- Extract conditional triggers such as "if/then," "when," "unless," thresholds, alerts, and monitoring rules into a dedicated trigger/rules block.
+- Do not bury private data warnings, forbidden actions, or alert conditions inside generic source details.
+
+### Layer 3: Entity And Variable Mapping
+
+After intent and guardrails are known, map the concrete variables.
+
+- Pull out names, places, organizations, dates, times, quantities, colors, object descriptions, technical specs, model names, platforms, URLs, and tool names.
+- Use an anti-clipping sentence buffer: when a keyword is captured, preserve the surrounding sentence or clause so leading negatives such as "not," "don't," and "never" are not lost.
+- Treat explicit variables as high-priority execution data, not flavor text.
+
+### Layer 4: Persona And Style Synthesis
+
+Only after logic and variables are mapped should the parser interpret vibe.
+
+- Keep metaphors and voice cues as style instructions instead of mixing them into factual source details.
+- Map style to the relevant task when a prompt contains several deliverables. For example, a grant request may need a prestigious tone while lab sensor alerts may need a jovial assistant voice.
+- Preserve distinctive descriptors without reducing them to generic labels such as "warm," "human," or "professional."
+
+### Recommended Pipeline
+
+1. Scan: detect user type, domain, and guardrail mode.
+2. Filter: extract forbidden actions, private information warnings, and conditional triggers.
+3. Map: extract proper nouns, dates, times, quantities, technical specs, and other variables.
+4. Structure: group tasks into a task array with primary and secondary deliverables.
+5. Style: apply voice, metaphor, and tone signals to the correct tasks.
+
+## Runtime Critique And Repair
+
+Layered parsing creates the source of truth. The next quality step is to critique the generated prompt against that source of truth before the user sees it.
+
+The app should eventually behave like a small prompt quality system:
+
+```text
+rough user prompt
+-> layered parse object
+-> model-specific prompt renderer
+-> critique pass
+-> repair pass if needed
+-> final copy-ready prompt
+```
+
+The critique pass should be rubric-based, not vibes-based. It should inspect whether the rendered prompt preserved the modules extracted from the parse object.
+
+The first version should check:
+
+- Missing required deliverables.
+- Negative constraints that were dropped or reversed.
+- Private, secret, or forbidden-action warnings that were treated as ordinary tasks.
+- Conditional triggers, alert rules, thresholds, or monitoring instructions that were buried in generic context.
+- Academic-integrity guardrails triggered by professional academic language rather than student or graded-work context.
+- Explicit variables that disappeared from the final prompt.
+- Distinctive style cues flattened into generic professionalism.
+- Facts that appeared in the final prompt but were not supplied by the user or a safe default rule.
+
+When critique finds a high-priority issue, the repair step should revise the final prompt using the parse object. Repair should not invent new facts, add new obligations, or ask the user for clarification unless the request is fundamentally impossible to execute.
+
+The user-facing experience should remain simple: one copy-ready prompt. Critique metadata is an internal quality layer unless a later product decision adds an advanced debug view.
+
+## Continuous Improvement Loop
+
+The long-term engine should improve through a controlled feedback loop.
+
+The product should track failure categories, not raw user prompts, unless explicit consent and privacy language are added. Useful categories include:
+
+- `missing_deliverable`
+- `constraint_clipped`
+- `missed_conditional_trigger`
+- `academic_false_positive`
+- `style_flattened`
+- `variable_dropped`
+- `invented_fact`
+
+An offline improvement agent can periodically review fixture failures, anonymized failure categories, and user-approved examples. Its job is to propose changes to parser rules, prompt builders, fixtures, and docs.
+
+The improvement agent should not silently rewrite production behavior. It should propose changes, attach the relevant failure pattern, and require tests or fixtures for accepted updates.
+
 ## Executor Over Consultant
 
 ### Problem

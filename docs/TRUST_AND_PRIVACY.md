@@ -92,6 +92,31 @@ Avoid:
 - Logging generated output.
 - Capturing pasted sensitive data.
 
+## Quality Improvement Logging
+
+The prompt engine may eventually use anonymized quality signals to improve parser rules and generated prompts.
+
+For the MVP and near-term self-critique loop, store failure categories rather than raw prompt contents.
+
+Allowed quality signals:
+
+- `missing_deliverable`
+- `constraint_clipped`
+- `missed_conditional_trigger`
+- `academic_false_positive`
+- `style_flattened`
+- `variable_dropped`
+- `invented_fact`
+
+Avoid:
+
+- Storing raw prompts for self-improvement without explicit consent.
+- Storing generated outputs for self-improvement without explicit consent.
+- Sending private user prompts to an external improvement process without matching user-facing disclosure.
+- Claiming that prompts are not saved if any quality log contains recoverable prompt text.
+
+If a future improvement agent uses user examples, the app must distinguish between anonymized failure categories and user-approved example prompts.
+
 ## Trust Design Rule
 
 Trust copy should be short, visible, and accurate.

@@ -83,11 +83,93 @@ Poor generated prompts:
 - Convert "Brooklyn Sister" or "1970s disaster" into only "warm" or "human."
 - Force industry-standard defaults when the user intentionally left the domain open.
 
-## Framework Standards
+## Parser Reconstruction Standards
+
+Generated prompts should be built from a structured reconstruction of the user's request, not from a compressed summary.
+
+The parser should preserve these modules separately:
+
+- Domain and user context.
+- Multi-intent and task array.
+- Required deliverables.
+- Negative constraints and forbidden actions.
+- Conditional triggers and alert rules.
+- Entities and variables.
+- Style instructions mapped to the relevant task.
+
+Good generated prompts:
+
+- Separate "do not," "private," "secret," and similar constraints into high-priority guardrails.
+- Preserve if/then rules, thresholds, alert conditions, and monitoring triggers as execution rules.
+- Capture the full clause or sentence around extracted keywords so negatives and qualifiers are not clipped.
+- Keep style metaphors out of factual source details unless they are also a named entity.
+- Apply academic-integrity boundaries only when student or graded-work context is detected.
+
+Poor generated prompts:
+
+- Treat a forbidden action as a normal task.
+- Hide an if/then trigger in "Specific Source Details."
+- Clip "do not cite sources" into only "cite sources."
+- Trigger student guardrails for professional research, science, grant, or business contexts that merely use academic vocabulary.
+- Apply one generic vibe to every task when the user gave different styles for different outputs.
+
+## Runtime Critique Standards
+
+Generated prompts should be checked against the structured parse object before being returned to the user.
+
+The critique pass should produce an internal result with:
+
+- Pass/fail status.
+- Issue list.
+- Failure category.
+- Severity.
+- Repair instructions when the parse object contains enough information to fix the issue.
+
+Required critique categories:
+
+- `missing_deliverable`: a requested output is absent from the final prompt.
+- `constraint_clipped`: a negative, private, secret, or forbidden-action constraint was dropped, reversed, or softened.
+- `missed_conditional_trigger`: an if/then rule, threshold, monitoring condition, or alert trigger is missing or buried.
+- `academic_false_positive`: student guardrails were applied to professional, educator, scientific, grant, or business work without graded-work context.
+- `style_flattened`: distinctive voice, metaphor, or vibe was reduced to generic tone language.
+- `variable_dropped`: explicit names, places, dates, quantities, colors, tools, platforms, or technical specs were lost.
+- `invented_fact`: the final prompt introduced unsupported specifics that were not supplied by the user or a documented safe default.
+
+Good critique behavior:
+
+- Compares the final prompt to the parse object, not only to the raw text.
+- Marks high-priority guardrail failures as repair-required.
+- Repairs only with known parse data or documented safe defaults.
+- Keeps critique metadata internal unless a debug or evaluation mode is explicitly added.
+
+Poor critique behavior:
+
+- Rewards prompts merely for being longer.
+- Treats any polished answer as correct even when it drops constraints.
+- Adds new facts during repair.
+- Shows internal issue lists to everyday users as part of the default MVP flow.
+- Uses vague judgments such as "make this better" instead of named failure categories.
+
+## Continuous Improvement Standards
+
+Prompt Architect Studio should improve through a controlled evaluation loop.
+
+The ongoing improvement process should use:
+
+- Stress-test fixtures.
+- Anonymized failure categories.
+- User-approved examples.
+- The standards in this document as the evaluation rubric.
+
+The improvement process should propose updates to parser rules, prompt builders, fixtures, and docs. It should not silently mutate production behavior.
+
+Every accepted improvement should add or update a fixture so the same failure does not return unnoticed.
 
 ## Academic Integrity Guardrails
 
-When a rough prompt contains classroom or academic signals such as "student," "class," "professor," "teacher," "homework," "assignment," "essay," "paper," "high school," "college," "rubric," "citation," "MLA," or "APA," the generated prompt should shift into learning-support mode.
+When a rough prompt contains student or graded-work signals such as "my assignment," "my homework," "grade," "graded," "high school student," "my professor," "my teacher," "essay for class," "rubric," "quiz," "exam," "MLA," or "APA," the generated prompt should shift into learning-support mode.
+
+Academic language alone should not activate student guardrails. Professional research, scientific work, grant writing, curriculum design, small business training, and educator-authored materials should remain usable unless the request is clearly asking the app to help a student complete graded work.
 
 In learning-support mode, generated prompts should avoid helping users outsource graded work. They should not ask the target model to:
 
@@ -98,6 +180,8 @@ In learning-support mode, generated prompts should avoid helping users outsource
 - Impersonate a student voice or create text that can be pasted into a class assignment.
 
 Allowed support includes explaining concepts, clarifying instructions, creating study questions, suggesting reading strategies, giving self-review checklists, giving feedback on a student-provided draft without rewriting it, and showing similar non-assigned examples.
+
+## Framework Standards
 
 ### Dynamic
 

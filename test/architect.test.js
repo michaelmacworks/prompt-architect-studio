@@ -1,0 +1,130 @@
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import { architectPrompt } from "../functions/api/architect.js";
+import { evaluationCorpus } from "./evaluation-corpus.js";
+
+function runArchitect(roughPrompt, framework = "Dynamic") {
+  return architectPrompt({
+    roughPrompt,
+    framework,
+    targetModel: "GPT-5.5",
+    includeMeta: true,
+  });
+}
+
+test("does not apply student guardrails to professional grant research", () => {
+  const result = runArchitect(
+    "Draft a grant research brief using APA-style headings for our lab operations team. This is professional research, not student homework.",
+  );
+
+  assert.equal(result.meta.parse.guardrailMode, "standard");
+  assert.equal(result.meta.parse.userContext.type, "professional_or_educator_context");
+  assert.equal(result.meta.critique.failureTypes.includes("academic_false_positive"), false);
+});
+
+test("applies learning support guardrails to clear student graded-work context", () => {
+  const result = runArchitect(
+    "I am a high school student and this is my graded essay for class. Help me understand the rubric and make a self-review checklist.",
+  );
+
+  assert.equal(result.meta.parse.guardrailMode, "student_learning_support");
+  assert.match(result.prompt, /Learning support boundaries/i);
+});
+
+test("preserves forbidden actions as guardrails", () => {
+  const result = runArchitect(
+    "Write a research prompt about neighborhood zoning. Do not cite sources and never include private client names.",
+  );
+
+  assert.ok(result.meta.parse.forbiddenActions.some((item) => /do not cite sources/i.test(item)));
+  assert.ok(result.meta.parse.forbiddenActions.some((item) => /never include private client names/i.test(item)));
+  assert.equal(result.meta.critique.failureTypes.includes("constraint_clipped"), false);
+});
+
+test("preserves conditional triggers in a dedicated rule path", () => {
+  const result = runArchitect(
+    "Build an automation prompt for greenhouse monitoring. If the temperature goes above 80 degrees, alert me in Slack and include the sensor name.",
+  );
+
+  assert.ok(result.meta.parse.conditionalTriggers.some((item) => /above 80 degrees/i.test(item)));
+  assert.match(result.prompt, /Conditional Triggers \/ Rules/i);
+  assert.equal(result.meta.critique.failureTypes.includes("missed_conditional_trigger"), false);
+});
+
+test("preserves multi-deliverable requests and task-specific style", () => {
+  const result = runArchitect(
+    "Create a Facebook post, three tips, and one joke for Hidden Valley's Sunday 2-4 plant sale. Make it zippy but neighborly, Gen Z but no slang.",
+    "CO-STAR",
+  );
+
+  assert.ok(result.meta.parse.deliverables.includes("Facebook post"));
+  assert.ok(result.meta.parse.deliverables.includes("tips"));
+  assert.ok(result.meta.parse.deliverables.includes("joke"));
+  assert.ok(result.meta.parse.variables.some((item) => /Hidden Valley/i.test(item)));
+  assert.ok(result.meta.parse.variables.some((item) => /Sunday 2-4/i.test(item)));
+  assert.ok(result.meta.parse.styleByTask.some(({ style }) => /zippy but neighborly/i.test(style)));
+  assert.equal(result.meta.critique.failureTypes.includes("missing_deliverable"), false);
+  assert.equal(result.meta.critique.failureTypes.includes("style_flattened"), false);
+});
+
+function assertAnyMatch(values, expectedPattern, label) {
+  assert.ok(
+    values.some((value) => expectedPattern.test(String(value))),
+    `${label} should include ${expectedPattern}`,
+  );
+}
+
+function assertExpectedStrings(values, expectedStrings, label) {
+  expectedStrings.forEach((expectedValue) => {
+    assert.ok(values.includes(expectedValue), `${label} should include ${expectedValue}`);
+  });
+}
+
+test("seed evaluation corpus preserves expected parse and critique outcomes", () => {
+  evaluationCorpus.forEach(({ name, roughPrompt, framework = "Dynamic", expected }) => {
+    const result = runArchitect(roughPrompt, framework);
+    const { parse, critique } = result.meta;
+
+    if (expected.guardrailMode) {
+      assert.equal(parse.guardrailMode, expected.guardrailMode, `${name}: guardrail mode`);
+    }
+
+    if (expected.userContextType) {
+      assert.equal(parse.userContext.type, expected.userContextType, `${name}: user context`);
+    }
+
+    if (expected.deliverables) {
+      assertExpectedStrings(parse.deliverables, expected.deliverables, `${name}: deliverables`);
+    }
+
+    if (expected.forbiddenActions) {
+      expected.forbiddenActions.forEach((pattern) => assertAnyMatch(parse.forbiddenActions, pattern, `${name}: forbidden actions`));
+    }
+
+    if (expected.conditionalTriggers) {
+      expected.conditionalTriggers.forEach((pattern) => assertAnyMatch(parse.conditionalTriggers, pattern, `${name}: conditional triggers`));
+    }
+
+    if (expected.variables) {
+      expected.variables.forEach((pattern) => assertAnyMatch(parse.variables, pattern, `${name}: variables`));
+    }
+
+    if (expected.styleByTask) {
+      const styleValues = parse.styleByTask.map(({ style }) => style);
+      expected.styleByTask.forEach((pattern) => assertAnyMatch(styleValues, pattern, `${name}: style by task`));
+    }
+
+    if (expected.promptIncludes) {
+      expected.promptIncludes.forEach((text) => {
+        assert.match(result.prompt, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), `${name}: prompt includes ${text}`);
+      });
+    }
+
+    if (expected.absentFailureTypes) {
+      expected.absentFailureTypes.forEach((failureType) => {
+        assert.equal(critique.failureTypes.includes(failureType), false, `${name}: unexpected ${failureType}`);
+      });
+    }
+  });
+});
