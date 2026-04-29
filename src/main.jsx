@@ -2,6 +2,42 @@ import React, { useEffect, useMemo, useState } from "react";
 import { createRoot } from "react-dom/client";
 import "./styles.css";
 
+const siteUrl = "https://promptarchitectstudio.com";
+const defaultSeo = {
+  title: "Prompt Architect Studio | Model-Ready AI Prompt Builder",
+  description:
+    "Prompt Architect Studio turns rough ideas into structured, model-ready prompts for GPT, Claude, Gemini, and other leading AI tools.",
+};
+
+const routeSeo = {
+  "/": defaultSeo,
+  "/studio": {
+    title: "Prompt Studio | Prompt Architect Studio",
+    description:
+      "Paste a rough idea, choose a prompt framework, select a target model, and generate a copy-ready AI prompt.",
+  },
+  "/how-it-works": {
+    title: "How Prompt Architect Studio Works",
+    description:
+      "See how Prompt Architect Studio turns messy notes into structured prompts with clearer context, constraints, and output format.",
+  },
+  "/frameworks": {
+    title: "AI Prompt Frameworks | Prompt Architect Studio",
+    description:
+      "Use Dynamic, CO-STAR, RTF, RASC, and Agentic-Goal prompt styles to shape better instructions for AI models.",
+  },
+  "/use-cases": {
+    title: "AI Prompt Builder Use Cases | Prompt Architect Studio",
+    description:
+      "Explore prompt-building use cases for everyday AI users, small businesses, marketers, creators, and educators.",
+  },
+  "/trust": {
+    title: "Trust and Privacy | Prompt Architect Studio",
+    description:
+      "Review Prompt Architect Studio's MVP privacy posture, data-safety guidance, and responsible-use reminders.",
+  },
+};
+
 const frameworks = [
   {
     value: "Dynamic",
@@ -155,6 +191,10 @@ function App() {
     window.addEventListener("popstate", handleNavigation);
     return () => window.removeEventListener("popstate", handleNavigation);
   }, []);
+
+  useEffect(() => {
+    applyRouteMetadata(path);
+  }, [path]);
 
   const cleanPrompt = roughPrompt.trim();
   const canSubmit = cleanPrompt.length >= 8 && !isLoading;
@@ -535,6 +575,48 @@ function SiteFooter() {
       </div>
     </footer>
   );
+}
+
+function applyRouteMetadata(path) {
+  const seo = routeSeo[path] || defaultSeo;
+  const canonicalUrl = new URL(path === "/" ? "/" : path, siteUrl).href;
+  const imageUrl = new URL("/og-image.png", siteUrl).href;
+
+  document.title = seo.title;
+  upsertMeta("name", "description", seo.description);
+  upsertMeta("name", "robots", "index, follow");
+  upsertMeta("property", "og:type", "website");
+  upsertMeta("property", "og:site_name", "Prompt Architect Studio");
+  upsertMeta("property", "og:title", seo.title);
+  upsertMeta("property", "og:description", seo.description);
+  upsertMeta("property", "og:url", canonicalUrl);
+  upsertMeta("property", "og:image", imageUrl);
+  upsertMeta("property", "og:image:alt", "Prompt Architect Studio prompt workbench preview");
+  upsertMeta("name", "twitter:card", "summary_large_image");
+  upsertMeta("name", "twitter:title", seo.title);
+  upsertMeta("name", "twitter:description", seo.description);
+  upsertMeta("name", "twitter:image", imageUrl);
+  upsertLink("canonical", canonicalUrl);
+}
+
+function upsertMeta(attribute, key, content) {
+  let element = document.head.querySelector(`meta[${attribute}="${key}"]`);
+  if (!element) {
+    element = document.createElement("meta");
+    element.setAttribute(attribute, key);
+    document.head.appendChild(element);
+  }
+  element.setAttribute("content", content);
+}
+
+function upsertLink(rel, href) {
+  let element = document.head.querySelector(`link[rel="${rel}"]`);
+  if (!element) {
+    element = document.createElement("link");
+    element.setAttribute("rel", rel);
+    document.head.appendChild(element);
+  }
+  element.setAttribute("href", href);
 }
 
 createRoot(document.getElementById("root")).render(<App />);
