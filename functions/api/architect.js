@@ -56,6 +56,73 @@ function normalizePrompt(value) {
     .trim();
 }
 
+function applyCorrectionMarkers(prompt) {
+  const markerPattern =
+    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|never mind|ignore that|disregard that|instead)\b[:,.\s-]*/gi;
+  const matches = Array.from(prompt.matchAll(markerPattern));
+
+  if (!matches.length) {
+    return {
+      prompt,
+      correctionApplied: false,
+      correctionMarker: "",
+    };
+  }
+
+  const lastMatch = matches[matches.length - 1];
+  const corrected = prompt.slice(lastMatch.index + lastMatch[0].length).trim();
+
+  if (corrected.length < 8) {
+    return {
+      prompt,
+      correctionApplied: false,
+      correctionMarker: "",
+    };
+  }
+
+  return {
+    prompt: corrected,
+    correctionApplied: true,
+    correctionMarker: lastMatch[0].trim(),
+  };
+}
+
+function stripMetaSegments(prompt) {
+  const segments = splitPromptSegments(prompt);
+  const metaPattern =
+    /\b(?:stress[-\s]?testing\s+(?:your\s+)?app|testing your app|test run|your app|the app|prompt results|generated prompt|app output|this prompt tool|prompt architect)\b/i;
+  const promptIntroPattern = /^(?:here(?:'s| is)\s+)?(?:the\s+)?(?:real\s+)?prompt\s*:?\s*/i;
+  const strippedSegments = [];
+  const metaSegments = [];
+
+  segments.forEach((segment) => {
+    const cleaned = segment.replace(promptIntroPattern, "").trim();
+    if (metaPattern.test(segment) && segments.length > 1) {
+      metaSegments.push(segment);
+      return;
+    }
+    strippedSegments.push(cleaned || segment);
+  });
+
+  return {
+    prompt: strippedSegments.join(" ").trim() || prompt,
+    metaSegments,
+  };
+}
+
+function preprocessPrompt(roughPrompt) {
+  const normalized = normalizePrompt(roughPrompt);
+  const correction = applyCorrectionMarkers(normalized);
+  const stripped = stripMetaSegments(correction.prompt);
+
+  return {
+    prompt: stripped.prompt,
+    metaSegments: stripped.metaSegments,
+    correctionApplied: correction.correctionApplied,
+    correctionMarker: correction.correctionMarker,
+  };
+}
+
 function splitPromptSegments(roughPrompt) {
   return roughPrompt
     .split(/(?<=[.!?])\s+|\n+/)
@@ -264,6 +331,11 @@ const DELIVERABLE_PATTERNS = [
   [/\btiktok script\b/i, "TikTok script"],
   [/\bslack monitoring prompt\b/i, "Slack monitoring prompt"],
   [/\balert prompt\b/i, "alert prompt"],
+  [/\bstakeholder update\b/i, "stakeholder update"],
+  [/\bproject update\b/i, "project update"],
+  [/\bstatus update\b/i, "status update"],
+  [/\btext message\b|\bSMS message\b/i, "text message"],
+  [/\bcustomer email\b/i, "customer email"],
   [/\bfollow-up email\b/i, "follow-up email"],
   [/\bnext steps?\b/i, "next steps"],
   [/\ba few tips?\b|\btips?\b/i, "tips"],
@@ -286,9 +358,11 @@ const DELIVERABLE_PATTERNS = [
   [/\bcaption\b/i, "caption"],
   [/\bpost\b/i, "post"],
   [/\blanding page\b/i, "landing page"],
+  [/\bcampaign brief\b/i, "campaign brief"],
   [/\bcampaign\b/i, "campaign brief"],
   [/\bsop\b/i, "SOP"],
   [/\bmeeting notes\b/i, "meeting summary"],
+  [/\bsummary\b/i, "summary"],
   [/\bexecutive update\b/i, "executive update"],
   [/\bboard update\b/i, "board update"],
   [/\bresearch\b/i, "research brief"],
@@ -377,6 +451,8 @@ function extractNamedDetails(roughPrompt) {
     /\b(?:[A-Z][A-Za-z0-9]+|[A-Z]{2,}|\d+[A-Za-z]*)(?:\s+(?:[A-Z][A-Za-z0-9]+|[A-Z]{2,}|\d+[A-Za-z]*)){1,5}\b/g,
     /\b(?:[A-Z][a-z0-9]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z0-9]+|[A-Z]{2,}|[&-])){1,4}\b/g,
     /\b[A-Z][a-z0-9]+\s+(?:team|department|group|unit)\b/g,
+    /\b[A-Z][a-z0-9]+\s+(?:rollout|launch|project|initiative|campaign|beta)\b/g,
+    /\b(?:in|at|from|for|to)\s+[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+){0,2}\b/g,
   ]).filter((phrase) => !stopPhrases.has(phrase));
 
   return normalizeList([...capitalizedPhrases, ...extractQuotedPhrases(roughPrompt)]);
@@ -412,6 +488,32 @@ function extractSpecificDetails(roughPrompt) {
       ...extractTimeDetails(roughPrompt),
       ...extractObjectDetails(roughPrompt),
       ...extractQuantityDetails(roughPrompt),
+      ...extractAudienceDetails(roughPrompt),
+      ...extractContextDetails(roughPrompt),
+    ]),
+  );
+}
+
+function extractContextDetails(roughPrompt) {
+  return extractRegexValues(roughPrompt, [
+    /\b[a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,3}\s+(?:outage|incident|error|bug|launch|rollout|migration|delay|crash)\b/gi,
+  ]);
+}
+
+function extractAudienceDetails(roughPrompt) {
+  return uniqueValues(
+    matchTerms(roughPrompt, [
+      "beta users",
+      "store managers",
+      "support agents",
+      "founders",
+      "operators",
+      "marketers",
+      "customers",
+      "clients",
+      "prospects",
+      "employees",
+      "staff",
     ]),
   );
 }
@@ -427,7 +529,7 @@ function extractQuantityDetails(roughPrompt) {
 function extractConstraintClauses(roughPrompt) {
   return normalizeList(
     splitPromptSegments(roughPrompt).filter((segment) =>
-      /\b(?:do not|don't|dont|never|avoid|without|no\s+\w+|private|secret|confidential|do not share|do not cite|don't cite)\b/i.test(segment),
+      /\b(?:do not|don't|dont|never|avoid|ignore|without|no\s+\w+|private|secret|confidential|do not share|do not cite|don't cite)\b/i.test(segment),
     ),
   );
 }
@@ -435,16 +537,43 @@ function extractConstraintClauses(roughPrompt) {
 function extractForbiddenActions(roughPrompt) {
   return normalizeList(
     extractConstraintClauses(roughPrompt).filter((segment) =>
-      /\b(?:do not|don't|dont|never|avoid|without|no\s+\w+|private|secret|confidential)\b/i.test(segment),
+      /\b(?:do not|don't|dont|never|avoid|ignore|without|no\s+\w+|private|secret|confidential)\b/i.test(segment),
+    ),
+  );
+}
+
+function extractProhibitedTopics(roughPrompt) {
+  return normalizeList(
+    extractConstraintClauses(roughPrompt).filter((segment) =>
+      /\bignore\b|\b(?:do not|don't|dont|never|avoid|without|no\s+\w+|private|secret|confidential)\s+(?:mention|include|reveal|share|expose|name|cite|reference|disclose|use|admit)\b|\b(?:keep|leave)\b[^.!?\n]*(?:private|secret|confidential)\b/i.test(
+        segment,
+      ),
+    ),
+  );
+}
+
+function extractProhibitedTasks(roughPrompt) {
+  return normalizeList(
+    extractConstraintClauses(roughPrompt).filter((segment) =>
+      /\b(?:do not|don't|dont|never|avoid)\s+(?:write|draft|create|make|build|generate|solve|complete|submit|send|publish|offer)\b/i.test(
+        segment,
+      ),
     ),
   );
 }
 
 function extractConditionalTriggers(roughPrompt) {
-  return normalizeList(
-    splitPromptSegments(roughPrompt).filter((segment) =>
+  const sentenceTriggers = splitPromptSegments(roughPrompt).filter((segment) =>
       /\b(?:if|when|unless|whenever|alert|notify|trigger|threshold|above|below|greater than|less than|over|under|at least|no more than)\b/i.test(segment),
-    ),
+  );
+  const clauseTriggers = extractRegexValues(roughPrompt, [
+    /\bunless\s+[^.!?,;]+(?:\s+[^.!?,;]+){0,12}/gi,
+    /\bif\s+[^.!?,;]+(?:\s+[^.!?,;]+){0,12}/gi,
+    /\bwhen\s+[^.!?,;]+(?:\s+[^.!?,;]+){0,12}/gi,
+  ]);
+
+  return normalizeList(
+    removeSubsumedValues([...sentenceTriggers, ...clauseTriggers]),
   );
 }
 
@@ -525,6 +654,8 @@ function createParseObject(roughPrompt) {
   const objective = inferObjective(roughPrompt);
   const constraints = extractConstraintClauses(roughPrompt);
   const forbiddenActions = extractForbiddenActions(roughPrompt);
+  const prohibitedTopics = extractProhibitedTopics(roughPrompt);
+  const prohibitedTasks = extractProhibitedTasks(roughPrompt);
   const conditionalTriggers = extractConditionalTriggers(roughPrompt);
   const platforms = uniqueValues(
     matchTerms(roughPrompt, [
@@ -559,6 +690,8 @@ function createParseObject(roughPrompt) {
       ...extractTimeDetails(roughPrompt),
       ...extractObjectDetails(roughPrompt),
       ...extractQuantityDetails(roughPrompt),
+      ...extractAudienceDetails(roughPrompt),
+      ...extractContextDetails(roughPrompt),
       ...platforms,
     ]),
   );
@@ -575,6 +708,8 @@ function createParseObject(roughPrompt) {
     deliverables,
     constraints,
     forbiddenActions,
+    prohibitedTopics,
+    prohibitedTasks,
     conditionalTriggers,
     entities,
     variables,
@@ -758,7 +893,9 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
     ["Learning Support Boundary", academicContext.active ? "Academic context detected; help the learner understand and practice without drafting, outlining, citing sources, or solving graded work directly." : ""],
     ["Academic Signals", academicContext.signals.join(", ")],
     ["Guardrail Mode", parse.guardrailMode],
-    ["Forbidden Actions", listOrFallback(parse.forbiddenActions)],
+    ["Prohibited Topics", listOrFallback(parse.prohibitedTopics)],
+    ["Prohibited Tasks", listOrFallback(parse.prohibitedTasks)],
+    ["Privacy / Negative Constraints", listOrFallback(parse.constraints)],
     ["Conditional Triggers / Rules", listOrFallback(parse.conditionalTriggers)],
     ["Platform / Channels", platforms.join(", ")],
     ["Industry / Domain", parse.domain !== "Not specified" ? parse.domain : industries.join(", ")],
@@ -1110,6 +1247,32 @@ function critiquePrompt(prompt, parse) {
     }
   });
 
+  parse.prohibitedTopics.forEach((topic) => {
+    if (!includesApproximate(prompt, topic)) {
+      issues.push(
+        createCritiqueIssue(
+          "prohibited_topic_dropped",
+          "high",
+          `Missing prohibited topic constraint: ${topic}.`,
+          `Restore this as a prohibited topic, not a banned task: ${topic}.`,
+        ),
+      );
+    }
+  });
+
+  parse.prohibitedTasks.forEach((task) => {
+    if (!includesApproximate(prompt, task)) {
+      issues.push(
+        createCritiqueIssue(
+          "prohibited_task_dropped",
+          "high",
+          `Missing prohibited task constraint: ${task}.`,
+          `Restore this as a prohibited task: ${task}.`,
+        ),
+      );
+    }
+  });
+
   parse.conditionalTriggers.forEach((trigger) => {
     if (!includesApproximate(prompt, trigger)) {
       issues.push(
@@ -1180,7 +1343,15 @@ function repairPrompt(prompt, parse, critique) {
   }
 
   if (hasIssue("constraint_clipped") && parse.forbiddenActions.length) {
-    additions.push(`High-priority guardrails:\n${parse.forbiddenActions.map((item) => `- ${item}`).join("\n")}`);
+    additions.push(`Privacy and negative constraints:\n${parse.forbiddenActions.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("prohibited_topic_dropped") && parse.prohibitedTopics.length) {
+    additions.push(`Strictly prohibited topics:\n${parse.prohibitedTopics.map((item) => `- ${item}`).join("\n")}`);
+  }
+
+  if (hasIssue("prohibited_task_dropped") && parse.prohibitedTasks.length) {
+    additions.push(`Strictly prohibited tasks:\n${parse.prohibitedTasks.map((item) => `- ${item}`).join("\n")}`);
   }
 
   if (hasIssue("missed_conditional_trigger") && parse.conditionalTriggers.length) {
@@ -1212,7 +1383,8 @@ ${additions.join("\n\n")}`;
 }
 
 export function architectPrompt(payload) {
-  const roughPrompt = normalizePrompt(payload.roughPrompt);
+  const preprocess = preprocessPrompt(payload.roughPrompt);
+  const roughPrompt = preprocess.prompt;
   const framework = normalizeFramework(payload.framework);
   const targetModel = String(payload.targetModel || "");
   const includeMeta = payload.includeMeta === true;
@@ -1238,6 +1410,11 @@ export function architectPrompt(payload) {
     "Agentic-Goal": buildAgenticGoalPrompt,
   };
   const parse = createParseObject(roughPrompt);
+  parse.preprocess = {
+    metaSegments: preprocess.metaSegments,
+    correctionApplied: preprocess.correctionApplied,
+    correctionMarker: preprocess.correctionMarker,
+  };
   const renderedPrompt = formatForTargetModel(builders[framework](input), targetModel);
   const critique = critiquePrompt(renderedPrompt, parse);
   const repairedPrompt = repairPrompt(renderedPrompt, parse, critique);

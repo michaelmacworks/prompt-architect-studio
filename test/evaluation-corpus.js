@@ -26,7 +26,7 @@ export const evaluationCorpus = [
     expected: {
       forbiddenActions: [/do not cite sources/i, /never include private client names/i],
       absentFailureTypes: ["constraint_clipped"],
-      promptIncludes: ["Forbidden Actions", "private client names"],
+      promptIncludes: ["Prohibited Topics", "private client names"],
     },
   },
   {
@@ -235,6 +235,155 @@ export const evaluationCorpus = [
       forbiddenActions: [/no buzzwords/i],
       styleByTask: [/confident, human, and not corporate/i],
       absentFailureTypes: ["constraint_clipped", "style_flattened"],
+    },
+  },
+  {
+    name: "negative topic does not cancel project update task",
+    roughPrompt:
+      "Create a project update for Monday morning. Do not mention the server crash or Jerry's complaint; focus on the recovery plan and next steps.",
+    expected: {
+      deliverables: ["project update", "next steps"],
+      prohibitedTopics: [/do not mention the server crash or Jerry's complaint/i],
+      prohibitedTasks: [],
+      promptIncludes: ["Prohibited Topics", "project update"],
+      promptExcludes: ["Strictly prohibited tasks:\n- Create a project update"],
+      absentFailureTypes: ["missing_deliverable", "prohibited_topic_dropped"],
+    },
+  },
+  {
+    name: "never mind correction removes earlier facts",
+    roughPrompt:
+      "Write a LinkedIn post about the failed launch in Kazakhstan. Actually, never mind. Write a stakeholder update and a text message about the successful beta launch in Austin.",
+    expected: {
+      deliverables: ["stakeholder update", "text message"],
+      variables: [/Austin/i],
+      absentVariables: [/Kazakhstan/i],
+      promptExcludes: ["Kazakhstan"],
+      absentFailureTypes: ["missing_deliverable", "variable_dropped"],
+      correctionApplied: true,
+    },
+  },
+  {
+    name: "meta testing preamble stripped before parsing",
+    roughPrompt:
+      "I am stress-testing your app and checking the prompt results. The real prompt: Make a LinkedIn post, stakeholder update, and text message for the Atlas rollout. Ignore Kazakhstan because that was just noise.",
+    expected: {
+      deliverables: ["LinkedIn post", "stakeholder update", "text message"],
+      variables: [/Atlas/i],
+      prohibitedTopics: [/Ignore Kazakhstan because that was just noise/i],
+      promptExcludes: ["stress-testing your app"],
+      metaSegments: [/stress-testing your app/i],
+      absentFailureTypes: ["missing_deliverable"],
+    },
+  },
+  {
+    name: "legal minefield separates prohibited topics from required task",
+    roughPrompt:
+      "Draft a compliance-safe customer email about the product delay. Do not mention refunds, do not admit liability, and do not use the phrase legal will kill me.",
+    expected: {
+      deliverables: ["customer email"],
+      prohibitedTopics: [/Do not mention refunds/i, /do not admit liability/i, /do not use the phrase legal will kill me/i],
+      prohibitedTasks: [],
+      promptIncludes: ["customer email", "Prohibited Topics"],
+      absentFailureTypes: ["missing_deliverable", "prohibited_topic_dropped"],
+    },
+  },
+  {
+    name: "latest correction marker wins",
+    roughPrompt:
+      "Write a LinkedIn post for a Chicago beta. Scratch that, make it a stakeholder update for Denver. Actually, never mind. Make it a text message for Austin customers.",
+    expected: {
+      deliverables: ["text message"],
+      variables: [/Austin/i],
+      absentDeliverables: ["LinkedIn post", "stakeholder update"],
+      absentVariables: [/Chicago/i, /Denver/i],
+      promptExcludes: ["Chicago", "Denver"],
+      correctionApplied: true,
+      absentFailureTypes: ["missing_deliverable", "variable_dropped"],
+    },
+  },
+  {
+    name: "testing inside real campaign is not stripped",
+    roughPrompt:
+      "Write a campaign brief for testing a new app feature with beta users. Include a LinkedIn post and a short email.",
+    expected: {
+      deliverables: ["campaign brief", "LinkedIn post", "email"],
+      variables: [/beta users/i],
+      metaSegmentsLength: 0,
+      promptIncludes: ["testing a new app feature"],
+      absentFailureTypes: ["missing_deliverable"],
+    },
+  },
+  {
+    name: "ignore as user behavior is not prohibited topic",
+    roughPrompt:
+      "Create an SOP for support agents when users ignore password reset alerts. Include escalation steps and a concise summary.",
+    expected: {
+      deliverables: ["SOP", "steps", "summary"],
+      prohibitedTopics: [],
+      promptIncludes: ["ignore password reset alerts"],
+      absentFailureTypes: ["missing_deliverable"],
+    },
+  },
+  {
+    name: "explicit prohibited legal task is separated",
+    roughPrompt:
+      "Create a checklist for a founder reviewing a vendor deal. Do not draft a legal contract or provide legal advice.",
+    expected: {
+      deliverables: ["checklist"],
+      prohibitedTasks: [/Do not draft a legal contract or provide legal advice/i],
+      promptIncludes: ["Prohibited Tasks", "legal contract"],
+      absentFailureTypes: ["prohibited_task_dropped"],
+    },
+  },
+  {
+    name: "mixed refund topic and task split",
+    roughPrompt:
+      "Write a customer email about a late delivery. Do not mention refunds and do not offer refunds unless the order is more than 14 days late.",
+    expected: {
+      deliverables: ["customer email"],
+      prohibitedTopics: [/Do not mention refunds/i],
+      prohibitedTasks: [/do not offer refunds unless the order is more than 14 days late/i],
+      conditionalTriggers: [/unless the order is more than 14 days late/i],
+      variables: [/14 days/i],
+      absentFailureTypes: ["prohibited_topic_dropped", "prohibited_task_dropped", "missed_conditional_trigger"],
+    },
+  },
+  {
+    name: "deliverables after retraction only include final ask",
+    roughPrompt:
+      "Make a LinkedIn post and a stakeholder update for the launch. Never mind, make a text message only for store managers.",
+    expected: {
+      deliverables: ["text message"],
+      absentDeliverables: ["LinkedIn post", "stakeholder update"],
+      variables: [/store managers/i],
+      correctionApplied: true,
+      absentFailureTypes: ["missing_deliverable"],
+    },
+  },
+  {
+    name: "meta stripped while real prompt keeps app subject",
+    roughPrompt:
+      "I am testing the prompt results in your app. Real prompt: Write a customer email about a mobile app outage. Do not mention the database migration.",
+    expected: {
+      deliverables: ["customer email"],
+      variables: [/mobile app outage/i],
+      prohibitedTopics: [/Do not mention the database migration/i],
+      metaSegments: [/testing the prompt results/i],
+      promptExcludes: ["testing the prompt results"],
+      absentFailureTypes: ["missing_deliverable", "prohibited_topic_dropped"],
+    },
+  },
+  {
+    name: "instead correction preserves later multi deliverables",
+    roughPrompt:
+      "Create a Facebook post for the old offer. Instead create a LinkedIn post, an email, and a text message for the new offer.",
+    expected: {
+      deliverables: ["LinkedIn post", "email", "text message"],
+      absentDeliverables: ["Facebook post"],
+      promptExcludes: ["Facebook post"],
+      correctionApplied: true,
+      absentFailureTypes: ["missing_deliverable"],
     },
   },
 ];

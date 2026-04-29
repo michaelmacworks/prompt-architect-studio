@@ -98,8 +98,23 @@ test("seed evaluation corpus preserves expected parse and critique outcomes", ()
       assertExpectedStrings(parse.deliverables, expected.deliverables, `${name}: deliverables`);
     }
 
+    if (expected.absentDeliverables) {
+      expected.absentDeliverables.forEach((deliverable) => {
+        assert.equal(parse.deliverables.includes(deliverable), false, `${name}: unexpected deliverable ${deliverable}`);
+      });
+    }
+
     if (expected.forbiddenActions) {
       expected.forbiddenActions.forEach((pattern) => assertAnyMatch(parse.forbiddenActions, pattern, `${name}: forbidden actions`));
+    }
+
+    if (expected.prohibitedTopics) {
+      expected.prohibitedTopics.forEach((pattern) => assertAnyMatch(parse.prohibitedTopics, pattern, `${name}: prohibited topics`));
+    }
+
+    if (expected.prohibitedTasks) {
+      assert.equal(parse.prohibitedTasks.length, expected.prohibitedTasks.length, `${name}: prohibited task count`);
+      expected.prohibitedTasks.forEach((pattern) => assertAnyMatch(parse.prohibitedTasks, pattern, `${name}: prohibited tasks`));
     }
 
     if (expected.conditionalTriggers) {
@@ -108,6 +123,12 @@ test("seed evaluation corpus preserves expected parse and critique outcomes", ()
 
     if (expected.variables) {
       expected.variables.forEach((pattern) => assertAnyMatch(parse.variables, pattern, `${name}: variables`));
+    }
+
+    if (expected.absentVariables) {
+      expected.absentVariables.forEach((pattern) => {
+        assert.equal(parse.variables.some((value) => pattern.test(String(value))), false, `${name}: unexpected variable ${pattern}`);
+      });
     }
 
     if (expected.styleByTask) {
@@ -119,6 +140,24 @@ test("seed evaluation corpus preserves expected parse and critique outcomes", ()
       expected.promptIncludes.forEach((text) => {
         assert.match(result.prompt, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), `${name}: prompt includes ${text}`);
       });
+    }
+
+    if (expected.promptExcludes) {
+      expected.promptExcludes.forEach((text) => {
+        assert.doesNotMatch(result.prompt, new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i"), `${name}: prompt excludes ${text}`);
+      });
+    }
+
+    if (expected.metaSegments) {
+      expected.metaSegments.forEach((pattern) => assertAnyMatch(parse.preprocess.metaSegments, pattern, `${name}: meta segments`));
+    }
+
+    if (expected.metaSegmentsLength !== undefined) {
+      assert.equal(parse.preprocess.metaSegments.length, expected.metaSegmentsLength, `${name}: meta segment count`);
+    }
+
+    if (expected.correctionApplied !== undefined) {
+      assert.equal(parse.preprocess.correctionApplied, expected.correctionApplied, `${name}: correction applied`);
     }
 
     if (expected.absentFailureTypes) {

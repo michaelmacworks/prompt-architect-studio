@@ -92,24 +92,32 @@ The parser should preserve these modules separately:
 - Domain and user context.
 - Multi-intent and task array.
 - Required deliverables.
-- Negative constraints and forbidden actions.
+- Negative constraints, prohibited topics, and prohibited tasks.
 - Conditional triggers and alert rules.
 - Entities and variables.
 - Style instructions mapped to the relevant task.
+- Meta-context and correction handling.
 
 Good generated prompts:
 
 - Separate "do not," "private," "secret," and similar constraints into high-priority guardrails.
+- Distinguish prohibited topics from prohibited tasks.
+- Preserve the primary task when the user forbids only a topic inside that task.
 - Preserve if/then rules, thresholds, alert conditions, and monitoring triggers as execution rules.
 - Capture the full clause or sentence around extracted keywords so negatives and qualifiers are not clipped.
+- Apply explicit retractions such as "actually, never mind" before extracting facts.
+- Strip app-testing meta-talk before generating the final prompt.
 - Keep style metaphors out of factual source details unless they are also a named entity.
 - Apply academic-integrity boundaries only when student or graded-work context is detected.
 
 Poor generated prompts:
 
 - Treat a forbidden action as a normal task.
+- Treat "do not mention the server crash" as "do not write the project update."
 - Hide an if/then trigger in "Specific Source Details."
 - Clip "do not cite sources" into only "cite sources."
+- Include abandoned facts that appeared before "actually, never mind" or "scratch that."
+- Include "I am testing your app" as task context.
 - Trigger student guardrails for professional research, science, grant, or business contexts that merely use academic vocabulary.
 - Apply one generic vibe to every task when the user gave different styles for different outputs.
 
@@ -129,6 +137,8 @@ Required critique categories:
 
 - `missing_deliverable`: a requested output is absent from the final prompt.
 - `constraint_clipped`: a negative, private, secret, or forbidden-action constraint was dropped, reversed, or softened.
+- `prohibited_topic_dropped`: a topic the user said not to mention, reveal, disclose, cite, name, or use was lost.
+- `prohibited_task_dropped`: an action the user said not to perform was lost.
 - `missed_conditional_trigger`: an if/then rule, threshold, monitoring condition, or alert trigger is missing or buried.
 - `academic_false_positive`: student guardrails were applied to professional, educator, scientific, grant, or business work without graded-work context.
 - `style_flattened`: distinctive voice, metaphor, or vibe was reduced to generic tone language.

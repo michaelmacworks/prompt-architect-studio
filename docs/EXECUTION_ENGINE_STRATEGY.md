@@ -121,6 +121,26 @@ Only after logic and variables are mapped should the parser interpret vibe.
 4. Structure: group tasks into a task array with primary and secondary deliverables.
 5. Style: apply voice, metaphor, and tone signals to the correct tasks.
 
+### Pre-Processing And Denoising
+
+Before layered parsing, the engine should strip conversational test harness language and apply explicit corrections.
+
+- Remove meta-talk about testing the app, prompt results, generated output, or the prompt tool itself when there is a separate actionable prompt.
+- Treat correction markers such as "actually, never mind," "scratch that," "ignore that," and "instead" as recency gates. The text after the latest correction marker should override earlier abandoned facts.
+- Keep intentional negative instructions such as "ignore Kazakhstan" as constraints when they belong to the actual prompt, not as app-testing metadata.
+- Do not allow retracted or meta-context facts to leak into the fact sheet.
+
+### Negative Scope Separation
+
+Negative constraints should not all be rendered as generic forbidden actions.
+
+Split them into:
+
+- Prohibited topics: things the target model must not mention, reveal, cite, name, disclose, or use.
+- Prohibited tasks: actions the target model must not perform, such as drafting a legal contract, solving homework, sending a message, offering a refund, or publishing something.
+
+This prevents "do not mention the server crash" from being misread as "do not create the project update." The app must preserve the primary task while constraining the content inside that task.
+
 ## Runtime Critique And Repair
 
 Layered parsing creates the source of truth. The next quality step is to critique the generated prompt against that source of truth before the user sees it.
