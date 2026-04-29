@@ -20,10 +20,11 @@ Final approved characteristics:
 
 - Keep the current content hierarchy and page flow.
 - Use the retro workbench visual theme.
-- Use the sand grid page background.
+- Use a medium charcoal gray grid page background.
 - Use warm rounded panels for page sections.
 - Use sticky-note styling for the rough prompt input area.
 - Use dark red/coral for primary action and the Studio headline.
+- Use Cooper-style bold headlines.
 - Use medium blue for outcome-style titles and use-case titles.
 - Use a dark blue selected state for prompt style selection.
 - Use a full-width dark gray footer with reversed type.

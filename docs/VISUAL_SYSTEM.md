@@ -31,7 +31,7 @@ Current approved palette and roles:
 
 ### Base
 
-- Sand grid page background.
+- Medium charcoal gray grid page background.
 - Warm paper/cream section surfaces.
 - White rough prompt input field to clearly signal the writing area.
 
@@ -62,11 +62,12 @@ The current final version uses the `retro-thumbnail-v3.html` visual treatment me
 Approved details:
 
 - Retro workbench mood.
-- Sand grid page background.
+- Medium charcoal gray grid page background.
 - Rounded warm content panels.
 - Sticky-note input panel.
 - White textarea for user input.
 - Dark red/coral primary action treatment.
+- Cooper-style bold headlines.
 - Dark red Studio headline.
 - Dark red numbers in the How It Works cards.
 - Medium blue framework outcome titles and use-case titles.
@@ -86,8 +87,8 @@ Approved details:
 
 Recommended direction:
 
-- Sans-serif.
-- Strong headline weight.
+- Cooper-style bold display face for headlines, with a serif fallback stack.
+- Sans-serif body text.
 - Highly readable body copy.
 - Monospace for generated prompt output.
 

@@ -156,8 +156,16 @@ test("seed evaluation corpus preserves expected parse and critique outcomes", ()
       assert.equal(parse.preprocess.metaSegments.length, expected.metaSegmentsLength, `${name}: meta segment count`);
     }
 
+    if (expected.retractedSegments) {
+      expected.retractedSegments.forEach((pattern) => assertAnyMatch(parse.preprocess.retractedSegments, pattern, `${name}: retracted segments`));
+    }
+
     if (expected.correctionApplied !== undefined) {
       assert.equal(parse.preprocess.correctionApplied, expected.correctionApplied, `${name}: correction applied`);
+    }
+
+    if (expected.preservedAnchors !== undefined) {
+      assert.equal(parse.preprocess.preservedAnchors, expected.preservedAnchors, `${name}: preserved anchors`);
     }
 
     if (expected.absentFailureTypes) {

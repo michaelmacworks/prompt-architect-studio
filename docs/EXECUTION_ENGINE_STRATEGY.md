@@ -127,6 +127,9 @@ Before layered parsing, the engine should strip conversational test harness lang
 
 - Remove meta-talk about testing the app, prompt results, generated output, or the prompt tool itself when there is a separate actionable prompt.
 - Treat correction markers such as "actually, never mind," "scratch that," "ignore that," and "instead" as recency gates. The text after the latest correction marker should override earlier abandoned facts.
+- Preserve anchor facts such as named products, organizations, specs, prices, quantities, dates, and technical terms from the prompt history unless the user explicitly says the data itself is wrong.
+- When a user cancels a task, update the task without throwing away reusable facts attached to the old task.
+- Treat quiet retractions such as "don't worry about X" as deletion instructions. Do not quote them back as constraints; simply omit the retracted content.
 - Keep intentional negative instructions such as "ignore Kazakhstan" as constraints when they belong to the actual prompt, not as app-testing metadata.
 - Do not allow retracted or meta-context facts to leak into the fact sheet.
 
@@ -140,6 +143,8 @@ Split them into:
 - Prohibited tasks: actions the target model must not perform, such as drafting a legal contract, solving homework, sending a message, offering a refund, or publishing something.
 
 This prevents "do not mention the server crash" from being misread as "do not create the project update." The app must preserve the primary task while constraining the content inside that task.
+
+The target balance is roughly 80% information retention and 20% noise reduction. A slightly messy fact sheet with the important facts is preferable to a perfectly pruned structure that loses the subject.
 
 ## Runtime Critique And Repair
 

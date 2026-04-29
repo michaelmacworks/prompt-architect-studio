@@ -386,4 +386,40 @@ export const evaluationCorpus = [
       absentFailureTypes: ["missing_deliverable"],
     },
   },
+  {
+    name: "task correction preserves product anchors",
+    roughPrompt:
+      "Write a press release for Titan Battery with 15% efficiency gains and a $499 launch price. Actually, scratch the press release, make it a LinkedIn article for investors.",
+    expected: {
+      deliverables: ["LinkedIn article"],
+      absentDeliverables: ["press release"],
+      variables: [/Titan Battery/i, /15%/i, /\$499/i],
+      correctionApplied: true,
+      preservedAnchors: true,
+      absentFailureTypes: ["missing_deliverable", "variable_dropped"],
+    },
+  },
+  {
+    name: "quiet retraction deletes container math without quoting it",
+    roughPrompt:
+      "Create a stakeholder update for the shipping delay. Don't worry about the container math from earlier. Mention the revised Friday timeline.",
+    expected: {
+      deliverables: ["stakeholder update"],
+      variables: [/Friday/i],
+      absentVariables: [/container math/i],
+      promptExcludes: ["container math", "Don't worry about"],
+      retractedSegments: [/container math/i],
+      absentFailureTypes: ["variable_dropped"],
+    },
+  },
+  {
+    name: "explicit social deliverable nouns stay specific",
+    roughPrompt:
+      "Create a LinkedIn Article and three Instagram Captions for the Titan Battery launch.",
+    expected: {
+      deliverables: ["LinkedIn article", "Instagram captions"],
+      variables: [/Titan Battery launch/i],
+      absentFailureTypes: ["missing_deliverable"],
+    },
+  },
 ];

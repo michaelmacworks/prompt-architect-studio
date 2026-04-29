@@ -156,6 +156,8 @@ The next engine sprint should replace one-pass summarization with a layered pars
 - Forbidden actions and private/secret constraints appear in a high-priority guardrails block.
 - Prohibited topics and prohibited tasks are separated.
 - Retractions and app-testing meta-talk do not leak into the final fact sheet.
+- Task-level corrections preserve reusable anchor facts such as product names, specs, prices, dates, and quantities.
+- Quiet retractions such as "don't worry about X" delete content instead of becoming quoted constraints.
 - Conditional triggers appear in a dedicated rules block.
 - Names, places, times, dates, quantities, and technical specs are preserved with surrounding qualifiers.
 - Style cues are applied to the correct task and are not mixed into factual source details.

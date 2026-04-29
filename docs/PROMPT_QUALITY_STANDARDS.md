@@ -106,9 +106,12 @@ Good generated prompts:
 - Preserve if/then rules, thresholds, alert conditions, and monitoring triggers as execution rules.
 - Capture the full clause or sentence around extracted keywords so negatives and qualifiers are not clipped.
 - Apply explicit retractions such as "actually, never mind" before extracting facts.
+- Preserve anchor facts such as names, products, specs, prices, dates, and quantities even when the user changes the requested deliverable.
+- Quietly delete content from "don't worry about X" or similar retractions instead of quoting the retraction back to the target model.
 - Strip app-testing meta-talk before generating the final prompt.
 - Keep style metaphors out of factual source details unless they are also a named entity.
 - Apply academic-integrity boundaries only when student or graded-work context is detected.
+- Prioritize explicit deliverable nouns such as email, post, article, script, caption, update, and text message over inferred generic categories.
 
 Poor generated prompts:
 
@@ -117,6 +120,9 @@ Poor generated prompts:
 - Hide an if/then trigger in "Specific Source Details."
 - Clip "do not cite sources" into only "cite sources."
 - Include abandoned facts that appeared before "actually, never mind" or "scratch that."
+- Throw away product names, specs, or prices just because the user changed from one deliverable format to another.
+- Quote "don't worry about container math" as a constraint instead of removing the container math.
+- Replace explicit deliverables such as "LinkedIn article" or "Instagram captions" with "best-fit work product."
 - Include "I am testing your app" as task context.
 - Trigger student guardrails for professional research, science, grant, or business contexts that merely use academic vocabulary.
 - Apply one generic vibe to every task when the user gave different styles for different outputs.

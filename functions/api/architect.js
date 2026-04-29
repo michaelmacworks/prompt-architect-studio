@@ -58,7 +58,7 @@ function normalizePrompt(value) {
 
 function applyCorrectionMarkers(prompt) {
   const markerPattern =
-    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|never mind|ignore that|disregard that|instead)\b[:,.\s-]*/gi;
+    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|scratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)|never mind|ignore that|disregard that|instead)\b[:,.\s-]*/gi;
   const matches = Array.from(prompt.matchAll(markerPattern));
 
   if (!matches.length) {
@@ -84,6 +84,26 @@ function applyCorrectionMarkers(prompt) {
     prompt: corrected,
     correctionApplied: true,
     correctionMarker: lastMatch[0].trim(),
+  };
+}
+
+function stripQuietRetractions(prompt) {
+  const segments = splitPromptSegments(prompt);
+  const quietRetractionPattern = /\b(?:don't worry about|do not worry about|no need to include|skip|leave out)\b/i;
+  const strippedSegments = [];
+  const retractedSegments = [];
+
+  segments.forEach((segment) => {
+    if (quietRetractionPattern.test(segment)) {
+      retractedSegments.push(segment);
+      return;
+    }
+    strippedSegments.push(segment);
+  });
+
+  return {
+    prompt: strippedSegments.join(" ").trim() || prompt,
+    retractedSegments,
   };
 }
 
@@ -113,11 +133,13 @@ function stripMetaSegments(prompt) {
 function preprocessPrompt(roughPrompt) {
   const normalized = normalizePrompt(roughPrompt);
   const correction = applyCorrectionMarkers(normalized);
-  const stripped = stripMetaSegments(correction.prompt);
+  const quietRetractions = stripQuietRetractions(correction.prompt);
+  const stripped = stripMetaSegments(quietRetractions.prompt);
 
   return {
     prompt: stripped.prompt,
     metaSegments: stripped.metaSegments,
+    retractedSegments: quietRetractions.retractedSegments,
     correctionApplied: correction.correctionApplied,
     correctionMarker: correction.correctionMarker,
   };
@@ -326,8 +348,11 @@ const DELIVERABLE_PATTERNS = [
   [/\bcustomer repl(?:y|ies)\b/i, "customer reply"],
   [/\bfacebook post\b/i, "Facebook post"],
   [/\binstagram caption\b/i, "Instagram caption"],
+  [/\binstagram captions\b/i, "Instagram captions"],
   [/\binstagram post\b/i, "Instagram post"],
+  [/\blinkedin article\b/i, "LinkedIn article"],
   [/\blinkedin post\b/i, "LinkedIn post"],
+  [/\bpress release\b/i, "press release"],
   [/\btiktok script\b/i, "TikTok script"],
   [/\bslack monitoring prompt\b/i, "Slack monitoring prompt"],
   [/\balert prompt\b/i, "alert prompt"],
@@ -500,6 +525,17 @@ function extractContextDetails(roughPrompt) {
   ]);
 }
 
+function extractAnchorDetails(roughPrompt) {
+  return removeSubsumedValues(
+    normalizeList([
+      ...extractNamedDetails(roughPrompt),
+      ...extractQuantityDetails(roughPrompt),
+      ...extractObjectDetails(roughPrompt),
+      ...extractContextDetails(roughPrompt),
+    ]),
+  );
+}
+
 function extractAudienceDetails(roughPrompt) {
   return uniqueValues(
     matchTerms(roughPrompt, [
@@ -520,7 +556,7 @@ function extractAudienceDetails(roughPrompt) {
 
 function extractQuantityDetails(roughPrompt) {
   return extractRegexValues(roughPrompt, [
-    /\b\d+(?:\.\d+)?\s*(?:%|percent|dollars?|usd|hours?|days?|weeks?|months?|years?|people|users|customers|clients|posts?|emails?|pages?|words?|characters?|items?|units?|degrees?|°[CF]?)\b/gi,
+    /\b\d+(?:\.\d+)?\s*(?:%|percent|dollars?|usd|hours?|days?|weeks?|months?|years?|people|users|customers|clients|posts?|emails?|pages?|words?|characters?|items?|units?|degrees?|°[CF]?)(?=\b|\s|$)/gi,
     /\$\s?\d[\d,]*(?:\.\d{2})?\b/g,
     /\b(?:under|below|less than|over|above|more than|at least|no more than)\s+\$?\d[\d,]*(?:\.\d+)?\b/gi,
   ]);
@@ -1383,6 +1419,7 @@ ${additions.join("\n\n")}`;
 }
 
 export function architectPrompt(payload) {
+  const originalPrompt = normalizePrompt(payload.roughPrompt);
   const preprocess = preprocessPrompt(payload.roughPrompt);
   const roughPrompt = preprocess.prompt;
   const framework = normalizeFramework(payload.framework);
@@ -1410,10 +1447,19 @@ export function architectPrompt(payload) {
     "Agentic-Goal": buildAgenticGoalPrompt,
   };
   const parse = createParseObject(roughPrompt);
+  const shouldPreserveAnchors =
+    preprocess.correctionApplied && /\bscratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)\b/i.test(
+      preprocess.correctionMarker,
+    );
+  if (shouldPreserveAnchors) {
+    parse.variables = removeSubsumedValues(normalizeList([...parse.variables, ...extractAnchorDetails(originalPrompt)]));
+  }
   parse.preprocess = {
     metaSegments: preprocess.metaSegments,
+    retractedSegments: preprocess.retractedSegments,
     correctionApplied: preprocess.correctionApplied,
     correctionMarker: preprocess.correctionMarker,
+    preservedAnchors: shouldPreserveAnchors,
   };
   const renderedPrompt = formatForTargetModel(builders[framework](input), targetModel);
   const critique = critiquePrompt(renderedPrompt, parse);

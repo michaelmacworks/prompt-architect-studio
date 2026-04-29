@@ -7,7 +7,7 @@
   --sand: #e4c5af;
   --sand-light: #f2decc;
   --paper: #fff8ec;
-  --page: #e4c5af;
+  --page: #4d5352;
   --surface: #ffffff;
   --surface-warm: #fff4c9;
   --ink: #111817;
@@ -40,9 +40,9 @@ body {
   min-width: 320px;
   margin: 0;
   background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.17) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.14) 1px, transparent 1px),
-    var(--sand);
+    linear-gradient(90deg, rgba(255, 255, 255, 0.08) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.07) 1px, transparent 1px),
+    var(--page);
   background-size: 42px 42px;
 }
 
@@ -73,6 +73,8 @@ p {
 h1,
 h2,
 h3 {
+  font-family: "Cooper Black", "Cooper Std Black", "Cooper Std", Georgia, "Times New Roman", serif;
+  font-weight: 900;
   letter-spacing: 0;
 }
 
