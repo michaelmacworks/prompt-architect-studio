@@ -56,9 +56,20 @@ Project Facts:
 - Budget: Under $500.
 ```
 
+The fact sheet must preserve explicit variables, not just task categories. Named locations, dates, time windows, colors, quantities, objects, examples, constraints, and proper nouns are execution data. For example, "Hidden Valley," "Sunday 2-4," and "lime green counters" should remain visible in the distilled facts.
+
+The deliverable field should be plural. If the source request asks for a post, a few tips, and a joke, the fact sheet should list all three deliverables instead of selecting only the first one as the primary intent.
+
 ### Product Rule
 
 The generated prompt should use the distilled fact sheet as the primary context block. The raw source text should not be the main thing handed to the target model when useful facts can be extracted first.
+
+The distillation layer should act like an architect, not a summarizer:
+
+- Keep all explicit user-supplied variables unless they are clearly irrelevant.
+- Promote explicit platforms and channels before using defaults. A "Facebook post" means Platform / Channels includes Facebook.
+- Treat secondary tasks as required deliverables, not optional extras.
+- Preserve precise style phrases such as "Brooklyn Sister" or "1970s disaster" instead of reducing them to generic warmth or professionalism.
 
 ## Executor Over Consultant
 
@@ -100,7 +111,10 @@ Intent extraction should:
 
 - Ignore greetings and filler such as "Hey there" or "Can you help me."
 - Find the actual verb-noun objective, such as "write a newsletter" or "draft a follow-up email."
+- Capture all requested deliverables in multi-part prompts.
+- Preserve explicit variable data such as locations, time windows, colors, objects, quantities, examples, and platform names.
 - Preserve vibe phrases in the fact sheet instead of reducing them to bland tone labels.
+- Prioritize the user's exact style descriptors over generic tone defaults.
 - Use assumptions sparingly when the user leaves the industry or audience vague on purpose.
 
 ## Outcome-Based UI Labels

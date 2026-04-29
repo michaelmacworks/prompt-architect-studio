@@ -3,6 +3,9 @@ const ALLOWED_MODELS = new Set(["GPT-5.5", "Claude", "Gemini"]);
 
 const UNIVERSAL_RULES = [
   "Preserve the user's original intent and meaningful domain language.",
+  "Preserve explicit variable data such as names, places, dates, time windows, colors, quantities, objects, and examples.",
+  "Capture every requested deliverable or task; do not collapse multi-part requests into one primary task.",
+  "Prioritize explicit nouns, platforms, channels, constraints, and audience labels from the source text over inferred defaults.",
   "Treat expressive wording, metaphors, and vibe cues as requirements, not decoration.",
   "Do not safe-wash creative language into generic professional defaults.",
   "If information is missing, fill only low-risk operational gaps; preserve deliberate ambiguity and mark major assumptions as optional.",
@@ -46,6 +49,13 @@ function normalizePrompt(value) {
 function splitPromptSegments(roughPrompt) {
   return roughPrompt
     .split(/(?<=[.!?])\s+|\n+/)
+    .map((segment) => segment.trim())
+    .filter(Boolean);
+}
+
+function splitPromptClauses(roughPrompt) {
+  return roughPrompt
+    .split(/(?<=[.!?])\s+|\n+|;|,(?=\s*(?:and|plus|also|then|with|write|draft|create|make|build|generate|turn|convert|rewrite|plan|outline|summarize|design|develop|prepare|compose|produce)\b)/i)
     .map((segment) => segment.trim())
     .filter(Boolean);
 }
@@ -112,6 +122,14 @@ function uniqueValues(values) {
   return Array.from(new Set(values.filter(Boolean)));
 }
 
+function normalizeList(values) {
+  return uniqueValues(
+    values
+      .map((value) => String(value || "").replace(/\s+/g, " ").replace(/\s+([,.!?;:])/g, "$1").trim())
+      .filter(Boolean),
+  );
+}
+
 function removeSubsumedValues(values) {
   return values.filter((value) => {
     const normalized = value.toLowerCase();
@@ -143,33 +161,124 @@ function titleCase(value) {
     .join(" ");
 }
 
+const DELIVERABLE_PATTERNS = [
+  [/\bfacebook post\b/i, "Facebook post"],
+  [/\binstagram post\b/i, "Instagram post"],
+  [/\blinkedin post\b/i, "LinkedIn post"],
+  [/\btiktok script\b/i, "TikTok script"],
+  [/\bfollow-up email\b/i, "follow-up email"],
+  [/\bnext steps?\b/i, "next steps"],
+  [/\ba few tips?\b|\btips?\b/i, "tips"],
+  [/\bjokes?\b/i, "joke"],
+  [/\bautomation prompt\b/i, "automation prompt"],
+  [/\bnewsletter\b/i, "newsletter plan"],
+  [/\bemail\b/i, "email"],
+  [/\bcaption\b/i, "caption"],
+  [/\bpost\b/i, "post"],
+  [/\blanding page\b/i, "landing page"],
+  [/\bcampaign\b/i, "campaign brief"],
+  [/\bsop\b/i, "SOP"],
+  [/\bmeeting notes\b/i, "meeting summary"],
+  [/\bexecutive update\b/i, "executive update"],
+  [/\bresearch\b/i, "research brief"],
+  [/\bcomparison\b/i, "comparison"],
+  [/\bplan\b/i, "plan"],
+  [/\bstrategy\b/i, "strategy"],
+  [/\bscript\b/i, "script"],
+  [/\boutline\b/i, "outline"],
+  [/\barticle\b/i, "article"],
+  [/\bmemo\b/i, "memo"],
+  [/\bprompt\b/i, "prompt"],
+];
+
 function inferDeliverable(roughPrompt) {
-  const normalized = roughPrompt.toLowerCase();
-  if (normalized.includes("follow-up email") && normalized.includes("next steps")) {
-    return "follow-up email and next steps";
-  }
+  const deliverables = DELIVERABLE_PATTERNS.filter(([pattern]) => pattern.test(roughPrompt)).map(([, label]) => label);
+  return removeSubsumedValues(normalizeList(deliverables));
+}
 
-  const deliverables = [
-    ["follow-up email", "follow-up email"],
-    ["next steps", "next steps"],
-    ["automation prompt", "automation prompt"],
-    ["newsletter", "newsletter plan"],
-    ["email", "email"],
-    ["caption", "caption"],
-    ["landing page", "landing page"],
-    ["campaign", "campaign brief"],
-    ["sop", "SOP"],
-    ["meeting notes", "meeting summary"],
-    ["executive update", "executive update"],
-    ["research", "research brief"],
-    ["comparison", "comparison"],
-    ["plan", "plan"],
-    ["strategy", "strategy"],
-    ["prompt", "prompt"],
-  ];
+function inferDeliverableSummary(roughPrompt) {
+  const deliverables = inferDeliverable(roughPrompt);
+  return deliverables.length ? deliverables.join("; ") : "best-fit work product";
+}
 
-  const match = deliverables.find(([term]) => normalized.includes(term));
-  return match ? match[1] : "best-fit work product";
+function inferTaskClauses(roughPrompt) {
+  const actionPattern =
+    /\b(write|draft|create|make|build|generate|turn|convert|translate|rewrite|plan|outline|summarize|design|develop|prepare|compose|produce|give|include|add|recommend|list)\b/i;
+  const deliverablePattern = new RegExp(
+    DELIVERABLE_PATTERNS.map(([pattern]) => pattern.source).join("|"),
+    "i",
+  );
+
+  const clauses = splitPromptClauses(roughPrompt)
+    .filter((segment) => !isFillerSegment(segment))
+    .filter((segment) => actionPattern.test(segment) || deliverablePattern.test(segment))
+    .map(cleanObjectiveSegment)
+    .map((segment) => segment.replace(/^(?:and|also|plus|then)\s+/i, ""))
+    .filter(Boolean);
+
+  return normalizeList(clauses).map((task) => (task.length > 180 ? `${task.slice(0, 177).trim()}...` : task));
+}
+
+function listOrFallback(values, fallback = "Not specified; use a low-risk default only if needed.") {
+  return values.length ? values.join("; ") : fallback;
+}
+
+function extractRegexValues(text, patterns) {
+  return normalizeList(patterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])));
+}
+
+function extractQuotedPhrases(text) {
+  return normalizeList(Array.from(text.matchAll(/["'“”‘’]([^"'“”‘’]{2,90})["'“”‘’]/g), (match) => match[1]));
+}
+
+function extractNamedDetails(roughPrompt) {
+  const stopPhrases = new Set([
+    "Facebook",
+    "Instagram",
+    "Instagram DMs",
+    "TikTok",
+    "LinkedIn",
+    "YouTube",
+    "Slack",
+    "Notion",
+    "HubSpot",
+    "Salesforce",
+    "Klaviyo",
+    "Mailchimp",
+    "Google Sheets",
+    "Airtable",
+  ]);
+  const capitalizedPhrases = extractRegexValues(roughPrompt, [
+    /\b(?:[A-Z][a-z0-9]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z0-9]+|[A-Z]{2,}|[&-])){1,4}\b/g,
+  ]).filter((phrase) => !stopPhrases.has(phrase));
+
+  return normalizeList([...capitalizedPhrases, ...extractQuotedPhrases(roughPrompt)]);
+}
+
+function extractTimeDetails(roughPrompt) {
+  return extractRegexValues(roughPrompt, [
+    /\b(?:Monday|Tuesday|Wednesday|Thursday|Friday|Saturday|Sunday)\s+(?:morning|afternoon|evening|night|\d{1,2}(?::\d{2})?\s*(?:am|pm)?(?:\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)?)?)\b/gi,
+    /\b(?:today|tomorrow|tonight|this\s+(?:morning|afternoon|evening|week|month|quarter|year)|next\s+(?:week|month|quarter|year))\b/gi,
+    /\b\d{1,2}(?::\d{2})?\s*(?:am|pm)\s*[-–]\s*\d{1,2}(?::\d{2})?\s*(?:am|pm)\b/gi,
+    /\b\d{1,2}\s*[-–]\s*\d{1,2}\s*(?:am|pm)?\b/gi,
+  ]);
+}
+
+function extractObjectDetails(roughPrompt) {
+  return extractRegexValues(roughPrompt, [
+    /\b(?:lime green|dark green|light green|forest green|navy blue|sky blue|royal blue|bright red|deep red|hot pink|pale pink|bright yellow|gold|orange|purple|black|white|gray|grey|silver|wood|metal|marble|retro|vintage|modern|1970s|80s|90s)\s+[a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,3}\b/gi,
+    /\b\d+(?:\.\d+)?\s*(?:x|by)\s*\d+(?:\.\d+)?\s*(?:inch|inches|ft|feet|cm|mm|px)?\b/gi,
+  ]);
+}
+
+function extractSpecificDetails(roughPrompt) {
+  return removeSubsumedValues(
+    normalizeList([
+      ...extractNamedDetails(roughPrompt),
+      ...extractTimeDetails(roughPrompt),
+      ...extractObjectDetails(roughPrompt),
+    ]),
+  );
 }
 
 function inferFactSheet(roughPrompt) {
@@ -179,9 +288,14 @@ function inferFactSheet(roughPrompt) {
       "Shopify",
       "Instagram",
       "Instagram DMs",
+      "Facebook",
+      "Facebook Groups",
       "TikTok",
       "LinkedIn",
       "YouTube",
+      "Pinterest",
+      "Twitter",
+      "Threads",
       "Slack",
       "Notion",
       "HubSpot",
@@ -190,6 +304,9 @@ function inferFactSheet(roughPrompt) {
       "Mailchimp",
       "Google Sheets",
       "Airtable",
+      "website",
+      "blog",
+      "SMS",
     ]),
   );
   const industries = removeSubsumedValues(
@@ -248,6 +365,7 @@ function inferFactSheet(roughPrompt) {
   );
   const tone = uniqueValues(
     matchTerms(roughPrompt, [
+      "Brooklyn Sister",
       "zippy",
       "neighborly",
       "casual",
@@ -267,12 +385,17 @@ function inferFactSheet(roughPrompt) {
       "Gen Z",
       "millennial",
       "pop",
+      "disaster",
+      "1970s",
     ]),
   );
   const vibeSignals = uniqueValues([
     ...tone,
+    ...extractQuotedPhrases(roughPrompt),
     ...matchPhrases(roughPrompt, [
       /\b(?:like|as if|feels? like|sounds? like)\s+[^.!?\n]{3,90}/i,
+      /\b(?:vibe|voice|tone|style|energy)\s*(?:is|as|like|should be|:)\s*[^.!?\n]{3,90}/i,
+      /\bmake it\s+[^.!?\n]{3,90}/i,
       /\b(?:not too|not so|not)\s+[^.!?\n,;]{3,60}/i,
       /\b(?:no|without)\s+[^.!?\n,;]{3,50}/i,
       /\b(?:but|and)\s+no\s+[^.!?\n,;]{3,50}/i,
@@ -311,13 +434,18 @@ function inferFactSheet(roughPrompt) {
   );
   const budgetMatch = roughPrompt.match(/(?:under|below|less than|budget of|budget:?)\s*\$?\s*[\d,]+/i);
   const cadenceMatch = roughPrompt.match(/\b\d+\s*[- ]?(?:week|day|month|part|step)s?\b/i);
+  const deliverables = inferDeliverable(roughPrompt);
+  const taskClauses = inferTaskClauses(roughPrompt);
+  const specificDetails = extractSpecificDetails(roughPrompt);
 
   const facts = [
-    ["Primary Intent", inferObjective(roughPrompt)],
-    ["Deliverable", inferDeliverable(roughPrompt)],
+    ["Primary Intent / Overall Goal", inferObjective(roughPrompt)],
+    ["Deliverables / Tasks", listOrFallback(deliverables, "Best-fit work product")],
+    ["Task Clauses to Preserve", listOrFallback(taskClauses)],
     ["Platform / Channels", platforms.join(", ")],
     ["Industry / Domain", industries.join(", ")],
     ["Audience", audiences.join(", ")],
+    ["Specific Source Details", listOrFallback(specificDetails)],
     ["Pain Point", painPoints.join(", ")],
     ["Constraints", constraints.join(", ")],
     ["Budget", budgetMatch?.[0]],
@@ -353,6 +481,7 @@ function normalizeFramework(value) {
 function baseSections({ roughPrompt, targetModel }) {
   return {
     intent: inferObjective(roughPrompt),
+    deliverables: inferDeliverableSummary(roughPrompt),
     factSheet: inferFactSheet(roughPrompt),
     model: modelGuidance(targetModel),
     rules: UNIVERSAL_RULES.map((rule) => `- ${rule}`).join("\n"),
@@ -377,15 +506,17 @@ Universal Prompt Architect rules:
 ${sections.rules}
 
 Your task:
-1. Look past greetings, filler, and setup language to identify the user's real goal, audience, constraints, style cues, and likely missing context.
-2. Preserve the user's expressive language where it communicates taste, energy, audience, or voice.
-3. Ask clarification questions only if the request cannot be executed without them.
-4. Produce the strongest useful output in the format best suited to the request.
+1. Look past greetings, filler, and setup language to identify the user's real goals, all requested deliverables, audience, constraints, style cues, and likely missing context.
+2. Preserve explicit source variables, including named places, times, colors, objects, quantities, platforms, examples, and unusual phrases.
+3. Preserve the user's expressive language where it communicates taste, energy, audience, or voice.
+4. Ask clarification questions only if the request cannot be executed without them.
+5. Produce the strongest useful output in the format best suited to the request.
 
 Response requirements:
 - Start with the finished answer, not a long explanation of your process.
 - Include a compact "Assumptions Used" section only when assumptions materially shape the answer; do not replace deliberate ambiguity with generic industry claims.
 - Include a dedicated "Style/Tone" section when the user provides vibe, voice, audience, humor, or brand cues, and use the user's own wording when it carries nuance.
+- Complete every item in "Deliverables / Tasks" and preserve every item in "Specific Source Details" unless it is directly irrelevant.
 - Use headings, tables, examples, or checklists only when they improve usability.
 - Include next steps or decision points when the user needs to act.
 - Do not make the user answer setup questions before receiving a useful output.`;
@@ -401,6 +532,9 @@ ${sections.factSheet}
 
 ## Objective
 Complete the best possible answer for this intent: ${sections.intent}
+
+Required deliverables:
+${sections.deliverables}
 
 ## Style/Tone
 Extract all voice, personality, humor, audience, and brand cues from the context. If the user implies a vibe, promote it here as a hard constraint. Preserve source phrases that carry nuance, such as "zippy," "neighborly," or "Gen Z but no slang."
@@ -422,6 +556,8 @@ Output format:
 - Begin with the final answer.
 - Use structured sections with short labels.
 - Include assumptions used, not questions, unless execution is impossible.
+- Complete every deliverable in the fact sheet.
+- Apply explicit channels, names, times, objects, quantities, and examples exactly when supplied.
 - Preserve the intended vibe as a visible constraint.`;
 }
 
@@ -434,7 +570,7 @@ function buildRtfPrompt(input) {
 Act as a senior specialist who can turn rough requests into direct, useful outputs.
 
 ## Task
-Complete this request:
+Complete this request, including every deliverable and task listed:
 ${sections.factSheet}
 
 Interpret the core objective as:
@@ -446,6 +582,7 @@ Extract and apply any style, tone, audience, voice, or humor cues from the sourc
 ## Format
 Return a polished answer with:
 - A direct final output.
+- Every requested deliverable, not only the first one.
 - Smart assumptions filled in where needed.
 - A reusable structure suited to the user's goal.
 - No fabricated facts or unsupported claims.
@@ -472,14 +609,17 @@ ${sections.factSheet}
 
 ## Steps
 1. Extract the real objective: ${sections.intent}
-2. Extract all tone, style, audience, voice, example, and constraint signals into a visible Style/Tone block, preserving source wording that carries human nuance.
-3. Fill only low-risk missing variables; use placeholders or optional assumptions when missing details would materially change the answer.
-4. Choose the most useful output structure for the task.
-5. Produce the final response with practical details and clear completion criteria.
-6. Self-check for relevance, specificity, unsupported claims, formatting quality, and vibe preservation. Make sure the result sounds like a creative partner understood the user.
+2. Extract every requested deliverable or secondary task and complete each one.
+3. Extract all tone, style, audience, voice, example, platform, object, location, time, and constraint signals into visible instruction blocks, preserving source wording that carries human nuance.
+4. Fill only low-risk missing variables; use placeholders or optional assumptions when missing details would materially change the answer.
+5. Choose the most useful output structure for the task.
+6. Produce the final response with practical details and clear completion criteria.
+7. Self-check for relevance, specificity, unsupported claims, formatting quality, secondary task coverage, source-detail preservation, and vibe preservation. Make sure the result sounds like a creative partner understood the user.
 
 ## Constraints
 - Preserve original intent.
+- Preserve explicit source details such as names, places, times, colors, objects, quantities, channels, examples, and constraints.
+- Complete all deliverables and secondary tasks in the fact sheet.
 - Do not invent private data, metrics, citations, or product details.
 - Use reasonable defaults for missing low-risk information.
 - Use placeholders like [audience], [deadline], or [brand voice] only when the missing information materially changes the answer.
@@ -516,14 +656,15 @@ Proceed independently. Fill ordinary low-risk gaps with high-probability strateg
 
 ## Plan
 1. Translate the rough prompt into a concrete objective.
-2. Determine deliverables, constraints, and acceptance criteria.
+2. Determine all deliverables, secondary tasks, source details, constraints, and acceptance criteria.
 3. Make the smallest useful assumptions required to move forward.
-4. Execute the task in the most useful format.
-5. Review the output for gaps, ambiguity, actionability, and style fidelity. Keep the user's personality in the work when it is part of the request.
+4. Execute every requested task in the most useful format.
+5. Review the output for gaps, ambiguity, actionability, source-detail preservation, and style fidelity. Keep the user's personality in the work when it is part of the request.
 
 ## Completion Criteria
 - The answer is ready to use without requiring the user to reformat it.
 - Any assumptions are explicit and minimal.
+- All explicit variables and secondary tasks from the source request are represented in the final answer.
 - The output matches the selected target model's strengths.
 - The user receives a useful finished result in one run, not a list of homework questions.
 

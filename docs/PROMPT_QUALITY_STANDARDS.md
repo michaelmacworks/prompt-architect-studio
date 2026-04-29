@@ -59,7 +59,11 @@ Good generated prompts:
 
 - Ignore greetings such as "Hey there" when identifying the primary intent.
 - Identify the actual verb-noun objective, such as "write a newsletter," "draft a follow-up email," or "turn this into a campaign brief."
+- Capture every requested deliverable when the prompt contains multiple tasks, such as "write a post, give a few tips, and add a joke."
+- Preserve explicit variable data such as named locations, dates, time windows, colors, quantities, objects, examples, and proper nouns.
+- Treat explicit platform nouns as authoritative. If the user asks for a "Facebook post," the output should not mark the platform as unspecified.
 - Preserve source phrases that carry vibe, such as "zippy," "neighborly," "uncle's garage," "not corporate," or "Gen Z but no slang."
+- Preserve highly specific style phrases, such as "Brooklyn Sister" or "1970s disaster," rather than flattening them into generic labels.
 - Translate vibe into usable instructions without flattening it into "clear, practical, and specific."
 - Use low-risk assumptions only when they help execution.
 - Keep deliberately vague context broad instead of inventing an industry, customer type, or business model.
@@ -67,8 +71,12 @@ Good generated prompts:
 Poor generated prompts:
 
 - Mark "Hey there" as the primary intent.
+- Strip out concrete execution variables such as "Hidden Valley," "Sunday 2-4," or "lime green counters."
+- Capture only the first requested task when the user asked for several deliverables.
+- Mark the platform as unspecified when the source text explicitly names Facebook, Instagram, LinkedIn, email, or another channel.
 - Replace "zippy but neighborly" with only "professional and clear."
 - Convert "Gen Z but no slang" into a sterile tone block that loses the middle ground.
+- Convert "Brooklyn Sister" or "1970s disaster" into only "warm" or "human."
 - Force industry-standard defaults when the user intentionally left the domain open.
 
 ## Framework Standards
