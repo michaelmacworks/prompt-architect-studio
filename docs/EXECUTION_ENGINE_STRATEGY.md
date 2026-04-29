@@ -60,6 +60,8 @@ The fact sheet must preserve explicit variables, not just task categories. Named
 
 The deliverable field should be plural. If the source request asks for a post, a few tips, and a joke, the fact sheet should list all three deliverables instead of selecting only the first one as the primary intent.
 
+Primary intent should describe the holistic goal, not simply the first urgent problem or emergency mentioned. If the request contains multiple execution clauses, the intent should summarize the multi-part request and leave the emergency as context.
+
 ### Product Rule
 
 The generated prompt should use the distilled fact sheet as the primary context block. The raw source text should not be the main thing handed to the target model when useful facts can be extracted first.
@@ -69,6 +71,7 @@ The distillation layer should act like an architect, not a summarizer:
 - Keep all explicit user-supplied variables unless they are clearly irrelevant.
 - Promote explicit platforms and channels before using defaults. A "Facebook post" means Platform / Channels includes Facebook.
 - Treat secondary tasks as required deliverables, not optional extras.
+- Keep "Deliverables / Tasks" synchronized with "Task Clauses to Preserve." If a preserved clause mentions a checklist, FAQ, template, bullet points, tips, joke, recommendations, or other output, that item should also appear in the deliverables list.
 - Preserve precise style phrases such as "Brooklyn Sister" or "1970s disaster" instead of reducing them to generic warmth or professionalism.
 
 ## Executor Over Consultant
@@ -111,6 +114,7 @@ Intent extraction should:
 
 - Ignore greetings and filler such as "Hey there" or "Can you help me."
 - Find the actual verb-noun objective, such as "write a newsletter" or "draft a follow-up email."
+- Summarize the whole execution goal when the first sentence is only an emergency, complaint, or setup.
 - Capture all requested deliverables in multi-part prompts.
 - Preserve explicit variable data such as locations, time windows, colors, objects, quantities, examples, and platform names.
 - Preserve vibe phrases in the fact sheet instead of reducing them to bland tone labels.

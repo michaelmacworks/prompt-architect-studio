@@ -59,7 +59,9 @@ Good generated prompts:
 
 - Ignore greetings such as "Hey there" when identifying the primary intent.
 - Identify the actual verb-noun objective, such as "write a newsletter," "draft a follow-up email," or "turn this into a campaign brief."
+- Avoid clipping the primary intent to the first emergency, complaint, or setup sentence when the full request contains a broader execution goal.
 - Capture every requested deliverable when the prompt contains multiple tasks, such as "write a post, give a few tips, and add a joke."
+- Add deliverables found inside preserved task clauses to the "Deliverables / Tasks" list so the target model treats them as required.
 - Preserve explicit variable data such as named locations, dates, time windows, colors, quantities, objects, examples, and proper nouns.
 - Treat explicit platform nouns as authoritative. If the user asks for a "Facebook post," the output should not mark the platform as unspecified.
 - Preserve source phrases that carry vibe, such as "zippy," "neighborly," "uncle's garage," "not corporate," or "Gen Z but no slang."
@@ -71,8 +73,10 @@ Good generated prompts:
 Poor generated prompts:
 
 - Mark "Hey there" as the primary intent.
+- Mark the first emergency or complaint as the whole primary intent while ignoring the requested outputs that follow.
 - Strip out concrete execution variables such as "Hidden Valley," "Sunday 2-4," or "lime green counters."
 - Capture only the first requested task when the user asked for several deliverables.
+- Preserve a clause mentioning a checklist, FAQ, template, bullet points, tips, joke, or recommendations without adding that output to the deliverables list.
 - Mark the platform as unspecified when the source text explicitly names Facebook, Instagram, LinkedIn, email, or another channel.
 - Replace "zippy but neighborly" with only "professional and clear."
 - Convert "Gen Z but no slang" into a sterile tone block that loses the middle ground.

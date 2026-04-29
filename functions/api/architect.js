@@ -92,7 +92,26 @@ function cleanObjectiveSegment(segment) {
     .trim();
 }
 
+function truncateValue(value, maxLength = 220) {
+  return value.length > maxLength ? `${value.slice(0, maxLength - 3).trim()}...` : value.trim();
+}
+
+function isStyleInstruction(segment) {
+  return /\b(?:make it|tone|voice|vibe|style|energy|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
+}
+
 function inferObjective(roughPrompt) {
+  const taskClauses = inferTaskClauses(roughPrompt);
+  const executionClauses = taskClauses.filter((clause) => !isStyleInstruction(clause));
+
+  if (executionClauses.length > 1) {
+    return truncateValue(`Complete a multi-part request: ${executionClauses.join("; ")}`, 260);
+  }
+
+  if (executionClauses.length === 1) {
+    return truncateValue(executionClauses[0]);
+  }
+
   const segments = splitPromptSegments(roughPrompt);
   const actionPattern =
     /\b(write|draft|create|make|build|generate|turn|convert|translate|rewrite|plan|outline|summarize|design|develop|prepare|compose|produce)\b/i;
@@ -115,7 +134,7 @@ function inferObjective(roughPrompt) {
     .sort((a, b) => b.score - a.score || a.index - b.index);
 
   const objective = ranked[0]?.segment || segments.find((segment) => !isFillerSegment(segment)) || roughPrompt;
-  return objective.length > 180 ? `${objective.slice(0, 177).trim()}...` : objective.trim();
+  return truncateValue(objective, 180);
 }
 
 function uniqueValues(values) {
@@ -170,6 +189,17 @@ const DELIVERABLE_PATTERNS = [
   [/\bnext steps?\b/i, "next steps"],
   [/\ba few tips?\b|\btips?\b/i, "tips"],
   [/\bjokes?\b/i, "joke"],
+  [/\bchecklists?\b/i, "checklist"],
+  [/\btemplates?\b/i, "template"],
+  [/\bexamples?\b/i, "examples"],
+  [/\bFAQs?\b|\bfrequently asked questions?\b/i, "FAQ"],
+  [/\brecommendations?\b|\brecommend\b/i, "recommendations"],
+  [/\bideas?\b/i, "ideas"],
+  [/\boptions?\b/i, "options"],
+  [/\bbullets?\b|\bbullet points?\b/i, "bullet points"],
+  [/\bheadlines?\b/i, "headlines"],
+  [/\btaglines?\b/i, "taglines"],
+  [/\bsteps?\b/i, "steps"],
   [/\bautomation prompt\b/i, "automation prompt"],
   [/\bnewsletter\b/i, "newsletter plan"],
   [/\bemail\b/i, "email"],
@@ -191,8 +221,16 @@ const DELIVERABLE_PATTERNS = [
   [/\bprompt\b/i, "prompt"],
 ];
 
-function inferDeliverable(roughPrompt) {
-  const deliverables = DELIVERABLE_PATTERNS.filter(([pattern]) => pattern.test(roughPrompt)).map(([, label]) => label);
+function inferDeliverableLabels(text) {
+  return DELIVERABLE_PATTERNS.filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
+}
+
+function inferDeliverable(roughPrompt, taskClauses = inferTaskClauses(roughPrompt)) {
+  const deliverables = [
+    ...inferDeliverableLabels(roughPrompt),
+    ...taskClauses.flatMap((clause) => inferDeliverableLabels(clause)),
+  ];
+
   return removeSubsumedValues(normalizeList(deliverables));
 }
 
@@ -216,7 +254,7 @@ function inferTaskClauses(roughPrompt) {
     .map((segment) => segment.replace(/^(?:and|also|plus|then)\s+/i, ""))
     .filter(Boolean);
 
-  return normalizeList(clauses).map((task) => (task.length > 180 ? `${task.slice(0, 177).trim()}...` : task));
+  return normalizeList(clauses).map((task) => truncateValue(task, 180));
 }
 
 function listOrFallback(values, fallback = "Not specified; use a low-risk default only if needed.") {
@@ -434,8 +472,8 @@ function inferFactSheet(roughPrompt) {
   );
   const budgetMatch = roughPrompt.match(/(?:under|below|less than|budget of|budget:?)\s*\$?\s*[\d,]+/i);
   const cadenceMatch = roughPrompt.match(/\b\d+\s*[- ]?(?:week|day|month|part|step)s?\b/i);
-  const deliverables = inferDeliverable(roughPrompt);
   const taskClauses = inferTaskClauses(roughPrompt);
+  const deliverables = inferDeliverable(roughPrompt, taskClauses);
   const specificDetails = extractSpecificDetails(roughPrompt);
 
   const facts = [
