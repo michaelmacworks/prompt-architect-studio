@@ -65,7 +65,7 @@ function normalizePrompt(value) {
 
 function applyCorrectionMarkers(prompt) {
   const markerPattern =
-    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|scratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)|never mind|ignore that|disregard that|instead(?!\s+of\b))\b[:,.\s-]*/gi;
+    /\b(?:actually,\s*never mind|actually\s+never mind|actually\s+no|wait,\s*scratch that|scratch that|scratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)|never mind|ignore that|disregard that|instead(?!\s+of\b))\b[:,.\s-]*/gi;
   const matches = Array.from(prompt.matchAll(markerPattern));
 
   if (!matches.length) {
@@ -207,13 +207,15 @@ function isStyleInstruction(segment) {
     return false;
   }
 
-  return /\b(?:make it|keep it|tone|voice|vibe|style|energy|should sound|should be|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
+  return /\b(?:make it|keep it|tone|voice|vibe|style|energy|should sound|should be|sound(?:s)? like|feel(?:s)? like|not corporate|no slang|cozy|cheesy|apologetic|calm|heartfelt|prestigious|plainspoken|formal|numbers-first|cheerful|cutesy)\b/i.test(segment);
 }
 
 function detectAcademicContext(roughPrompt) {
   const studentSignals = matchPhrases(roughPrompt, [
     /\bmy\s+(?:assignment|homework|essay|paper|discussion post|lab report|book report|worksheet|quiz|exam|midterm|final|professor|teacher|class|course|rubric|grade)\b/i,
     /\b(?:for|in)\s+my\s+(?:class|course|school|college|university|high school)\b/i,
+    /\bteacher\s+wants\b/i,
+    /\b\d+(?:st|nd|rd|th)?\s+grade\b/i,
     /\b(?:grade|graded|quiz|exam|worksheet|rubric)\b/i,
     /\b(?:high school|college|university)\s+student\b/i,
     /\bessay\s+for\s+class\b/i,
@@ -261,7 +263,7 @@ function detectAcademicContext(roughPrompt) {
   const negatedStudentContext = /\bnot\s+(?:a\s+)?(?:student|student work|student homework|homework|graded work|for class)\b/i.test(roughPrompt);
   const clearStudentContext = /\b(?:my\s+(?:assignment|homework|essay|paper|discussion post|lab report|book report|worksheet|quiz|exam|midterm|final|professor|teacher|class|course|rubric|grade)|(?:high school|college|university)\s+student|essay\s+for\s+class|graded\s+(?:essay|paper|assignment|work))\b/i.test(
     roughPrompt,
-  );
+  ) || /\bteacher\s+wants\b|\b\d+(?:st|nd|rd|th)?\s+grade\b/i.test(roughPrompt);
   const active =
     signals.length > 0 &&
     !negatedStudentContext &&
@@ -433,12 +435,32 @@ function inferRejectedDeliverableLabels(text) {
 
 function inferDeliverable(roughPrompt, taskClauses = inferTaskClauses(roughPrompt)) {
   const rejectedDeliverables = new Set(inferRejectedDeliverableLabels(roughPrompt));
+  const platformDeliverables = taskClauses.flatMap(inferPlatformDeliverables);
   const deliverables = [
     ...inferDeliverableLabels(roughPrompt),
     ...taskClauses.flatMap((clause) => inferDeliverableLabels(clause)),
+    ...platformDeliverables,
   ].filter((deliverable) => !rejectedDeliverables.has(deliverable));
 
   return removeSubsumedValues(normalizeList(deliverables));
+}
+
+function inferPlatformDeliverables(clause) {
+  const hasAction = /\b(write|draft|create|make|build|generate|prepare|compose|produce|give|include|add)\b/i.test(clause);
+  if (!hasAction) return [];
+
+  const deliverables = [];
+  if (/\binstagram\b/i.test(clause) && !/\binstagram\s+(?:post|caption|captions|dm|dms)\b/i.test(clause)) {
+    deliverables.push("Instagram post");
+  }
+  if (/\bfacebook\b/i.test(clause) && !/\bfacebook\s+(?:post|group|groups)\b/i.test(clause)) {
+    deliverables.push("Facebook post");
+  }
+  if (/\blinkedin\b/i.test(clause) && !(/\blinkedin\s+(?:post|article)\b/i.test(clause))) {
+    deliverables.push("LinkedIn post");
+  }
+
+  return deliverables;
 }
 
 function inferDeliverableSummary(roughPrompt) {
@@ -498,6 +520,7 @@ function extractNamedDetails(roughPrompt) {
     /\b(?:[A-Z][a-z0-9]+|[A-Z]{2,})(?:\s+(?:[A-Z][a-z0-9]+|[A-Z]{2,}|[&-])){1,4}\b/g,
     /\b[A-Z][a-z0-9]+\s+(?:team|department|group|unit)\b/g,
     /\b[A-Z][a-z0-9]+\s+(?:rollout|launch|project|initiative|campaign|beta)\b/g,
+    /\bcustomer\s+is\s+[A-Z][a-z0-9]+\b/gi,
     /\b(?:in|at|from|for|to)\s+[A-Z][a-z0-9]+(?:\s+[A-Z][a-z0-9]+){0,2}\b/g,
   ]).filter((phrase) => !stopPhrases.has(phrase));
 
@@ -579,16 +602,22 @@ function extractQuantityDetails(roughPrompt) {
   return extractRegexValues(roughPrompt, [
     /\b\d+(?:\.\d+)?\s*(?:%|percent|dollars?|usd|hours?|days?|weeks?|months?|years?|people|users|customers|clients|posts?|emails?|pages?|words?|characters?|items?|units?|degrees?|°[CF]?)(?=\b|\s|$)/gi,
     /\$\s?\d[\d,]*(?:\.\d{2})?\b/g,
+    /\b(?:order|invoice|ticket|case|sku)\s*#?\s*(?=[A-Z0-9-]*\d)[A-Z0-9-]+\b/gi,
     /\b(?:under|below|less than|over|above|more than|at least|no more than)\s+\$?\d[\d,]*(?:\.\d+)?\b/gi,
   ]);
 }
 
 function extractConstraintClauses(roughPrompt) {
-  return normalizeList(
-    splitPromptSegments(roughPrompt).filter((segment) =>
-      /\b(?:do not|don't|dont|never|avoid|ignore|without|no\s+\w+|private|secret|confidential|do not share|do not cite|don't cite)\b/i.test(segment),
-    ),
+  const segmentConstraints = splitPromptSegments(roughPrompt).filter((segment) =>
+    /\b(?:private|secret|confidential)\b/i.test(segment),
   );
+  const explicitConstraints = extractRegexValues(roughPrompt, [
+    /\b(?:do not|don't|dont|never|avoid|without|no)\s+[^.!?;,]+(?:\s+unless\s+[^.!?;,]+)?/gi,
+    /\bignore\s+[^.!?;,]+/gi,
+    /\b(?:keep|leave)\b[^.!?;,]*(?:private|secret|confidential)\b/gi,
+  ]);
+
+  return removeSubsumedValues(normalizeList([...segmentConstraints, ...explicitConstraints]));
 }
 
 function extractForbiddenActions(roughPrompt) {
@@ -882,6 +911,17 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
       "human",
       "approachable",
       "plainspoken",
+      "apologetic",
+      "calm",
+      "cozy",
+      "cheesy",
+      "heartfelt",
+      "prestigious",
+      "formal",
+      "numbers-first",
+      "cheerful",
+      "cutesy",
+      "fast",
       "funny",
       "encouraging",
       "playful",

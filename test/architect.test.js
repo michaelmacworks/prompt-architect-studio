@@ -101,6 +101,59 @@ test("normalizes legacy model family labels to current presets", () => {
   assert.match(geminiResult.prompt, /# Gemini 3\.5 Flash Execution Prompt/i);
 });
 
+test("extracts platform-only social deliverables and tight negative constraints", () => {
+  const result = architectPrompt({
+    roughPrompt:
+      "Make something for my bakery, like maybe instagram and an email. We have sourdough bagels this Saturday 8-11, only 40 packs, cozy but not cheesy, dont mention discounts.",
+    framework: "Dynamic",
+    targetModel: "GPT-5.5",
+    includeMeta: true,
+  });
+
+  assert.ok(result.meta.parse.deliverables.includes("Instagram post"));
+  assert.ok(result.meta.parse.deliverables.includes("email"));
+  assert.ok(result.meta.parse.prohibitedTopics.some((item) => /dont mention discounts/i.test(item)));
+  assert.equal(
+    result.meta.parse.prohibitedTopics.some((item) => /sourdough bagels/i.test(item)),
+    false,
+  );
+  assert.ok(result.meta.parse.styleByTask.some(({ style }) => /cozy but not cheesy/i.test(style)));
+});
+
+test("actually no correction supports learning-safe pivot", () => {
+  const result = architectPrompt({
+    roughPrompt:
+      "Write my essay about Macbeth for 10th grade, actually no, help me understand the assignment and make a study plan. Teacher wants themes and quotes by Friday. Dont write it for me.",
+    framework: "Dynamic",
+    targetModel: "Gemini 3.5 Flash",
+    includeMeta: true,
+  });
+
+  assert.equal(result.meta.parse.preprocess.correctionApplied, true);
+  assert.equal(result.meta.parse.guardrailMode, "student_learning_support");
+  assert.ok(result.meta.parse.deliverables.includes("plan"));
+  assert.equal(result.meta.parse.deliverables.includes("essay"), false);
+  assert.match(result.prompt, /Learning support boundaries/i);
+});
+
+test("customer reply preserves names order numbers and tone", () => {
+  const result = architectPrompt({
+    roughPrompt:
+      "Scratch the linkedin post. Need a customer reply for a ceramics order that arrived cracked. Customer is Maria, order 1842, replacement ships Tuesday, keep it apologetic but calm, dont blame the carrier, include next steps and a short subject line.",
+    framework: "CO-STAR",
+    targetModel: "Claude Sonnet 4.6",
+    includeMeta: true,
+  });
+
+  assert.ok(result.meta.parse.deliverables.includes("customer reply"));
+  assert.ok(result.meta.parse.deliverables.includes("next steps"));
+  assert.equal(result.meta.parse.deliverables.includes("LinkedIn post"), false);
+  assert.ok(result.meta.parse.variables.some((item) => /Maria/i.test(item)));
+  assert.ok(result.meta.parse.variables.some((item) => /order 1842/i.test(item)));
+  assert.ok(result.meta.parse.styleByTask.some(({ style }) => /apologetic but calm/i.test(style)));
+  assert.ok(result.meta.parse.forbiddenActions.some((item) => /dont blame the carrier/i.test(item)));
+});
+
 test("hybrid architect uses provider output and repairs dropped constraints", async () => {
   const calls = [];
   const fetchImpl = async (url, init) => {
