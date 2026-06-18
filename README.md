@@ -1,6 +1,6 @@
 # Prompt Architect Studio
 
-Prompt Architect Studio is a Vite React SaaS MVP that turns rough user prompts into structured, model-aware prompts for GPT-5.5, Claude, and Gemini.
+Prompt Architect Studio is a Vite React SaaS MVP that turns rough user prompts into structured, model-aware prompts for current GPT, Claude, and Gemini models.
 
 The app is designed for everyday AI users, small business owners, marketers, creators, educators, consultants, and professionals who want better outputs without learning prompt engineering.
 
@@ -16,6 +16,36 @@ Local app:
 ```text
 http://127.0.0.1:5173/
 ```
+
+The plain Vite dev server does not run Cloudflare Pages Functions. To test the live `/api/architect`
+endpoint locally, use:
+
+```bash
+npm run pages:dev
+```
+
+## AI Engine
+
+The API uses a hybrid engine:
+
+- A deterministic parser extracts deliverables, constraints, variables, style cues, and guardrails.
+- If `OPENAI_API_KEY` is configured, the Pages Function sends the parsed request to OpenAI for stronger prompt generation.
+- The local critique/repair pass checks the provider output so required details and constraints are not dropped.
+- If the provider is unavailable or no key is configured, the endpoint falls back to the deterministic prompt.
+
+Environment variables:
+
+- `OPENAI_API_KEY` - required for provider-backed generation.
+- `OPENAI_MODEL` - optional; defaults to `gpt-5.5`.
+
+Current target-model presets:
+
+- `GPT-5.5`
+- `Claude Fable 5`
+- `Claude Sonnet 4.6`
+- `Gemini 3.5 Flash`
+
+The API still accepts the older `Claude`, `Claude Opus 4.8`, `Gemini`, and `Gemini 3.1 Pro` labels as aliases so existing callers do not break.
 
 ## Production Build
 

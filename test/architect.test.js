@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 
-import { architectPrompt } from "../functions/api/architect.js";
+import { architectPrompt, architectPromptHybrid } from "../functions/api/architect.js";
 import { evaluationCorpus } from "./evaluation-corpus.js";
 
 function runArchitect(roughPrompt, framework = "Dynamic") {
@@ -66,6 +66,77 @@ test("preserves multi-deliverable requests and task-specific style", () => {
   assert.ok(result.meta.parse.styleByTask.some(({ style }) => /zippy but neighborly/i.test(style)));
   assert.equal(result.meta.critique.failureTypes.includes("missing_deliverable"), false);
   assert.equal(result.meta.critique.failureTypes.includes("style_flattened"), false);
+});
+
+test("hybrid architect falls back to rule-based output without an API key", async () => {
+  const result = await architectPromptHybrid({
+    roughPrompt: "Create an Instagram post for a candle sale, but do not mention pricing. Make it cozy.",
+    framework: "Dynamic",
+    targetModel: "GPT-5.5",
+    includeMeta: true,
+  });
+
+  assert.equal(result.engine.mode, "rule_based_fallback");
+  assert.equal(result.engine.reason, "missing_openai_api_key");
+  assert.match(result.prompt, /do not mention pricing/i);
+});
+
+test("normalizes legacy model family labels to current presets", () => {
+  const claudeResult = architectPrompt({
+    roughPrompt: "Create a customer reply about a delayed order. Keep it warm and concise.",
+    framework: "RTF",
+    targetModel: "Claude",
+    includeMeta: true,
+  });
+  const geminiResult = architectPrompt({
+    roughPrompt: "Compare three newsletter ideas in a table for a local bakery.",
+    framework: "RTF",
+    targetModel: "Gemini",
+    includeMeta: true,
+  });
+
+  assert.equal(claudeResult.targetModel, "Claude Fable 5");
+  assert.match(claudeResult.prompt, /<execution_prompt>/i);
+  assert.equal(geminiResult.targetModel, "Gemini 3.5 Flash");
+  assert.match(geminiResult.prompt, /# Gemini 3\.5 Flash Execution Prompt/i);
+});
+
+test("hybrid architect uses provider output and repairs dropped constraints", async () => {
+  const calls = [];
+  const fetchImpl = async (url, init) => {
+    calls.push({ url, init });
+    return {
+      ok: true,
+      status: 200,
+      json: async () => ({
+        output_text: "# GPT-5.5 Execution Prompt\n\nCreate an Instagram post for the candle sale. Make it cozy.",
+      }),
+    };
+  };
+
+  const result = await architectPromptHybrid(
+    {
+      roughPrompt: "Create an Instagram post for a candle sale, but do not mention pricing. Make it cozy.",
+      framework: "Dynamic",
+      targetModel: "GPT-5.5",
+      includeMeta: true,
+    },
+    {
+      env: {
+        OPENAI_API_KEY: "test-key",
+        OPENAI_MODEL: "gpt-5.5",
+      },
+      fetchImpl,
+    },
+  );
+
+  assert.equal(result.engine.mode, "hybrid");
+  assert.equal(result.engine.provider, "openai");
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0].url, "https://api.openai.com/v1/responses");
+  assert.equal(calls[0].init.headers.Authorization, "Bearer test-key");
+  assert.match(result.prompt, /do not mention pricing/i);
+  assert.equal(result.meta.critique.failureTypes.includes("prohibited_topic_dropped"), false);
 });
 
 function assertAnyMatch(values, expectedPattern, label) {

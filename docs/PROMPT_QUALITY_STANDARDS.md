@@ -284,23 +284,24 @@ Prompt should emphasize:
 - Strong constraints.
 - Production-ready output.
 
-### Claude
+### Claude Fable 5 / Claude Sonnet 4.6
 
 Prompt should emphasize:
 
-- Natural language clarity.
-- Nuance.
+- XML-style structure where it improves recall.
+- Nuance and long-horizon reasoning for Fable.
+- Concise, dependable execution for Sonnet.
 - Careful handling of assumptions.
 - Visible constraints.
 
-### Gemini
+### Gemini 3.5 Flash
 
 Prompt should emphasize:
 
 - Direct section labels.
 - Scannable structure.
 - Grounding in supplied context.
-- Clear output organization.
+- Tables for planning, comparison, prioritization, and execution.
 
 ## Acceptance Test
 

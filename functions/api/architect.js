@@ -1,5 +1,12 @@
 const ALLOWED_FRAMEWORKS = new Set(["Dynamic", "CO-STAR", "RTF", "RASC", "Agentic-Goal"]);
-const ALLOWED_MODELS = new Set(["GPT-5.5", "Claude", "Gemini"]);
+const CANONICAL_MODELS = ["GPT-5.5", "Claude Fable 5", "Claude Sonnet 4.6", "Gemini 3.5 Flash"];
+const TARGET_MODEL_ALIASES = {
+  Claude: "Claude Fable 5",
+  "Claude Opus 4.8": "Claude Fable 5",
+  Gemini: "Gemini 3.5 Flash",
+  "Gemini 3.1 Pro": "Gemini 3.5 Flash",
+};
+const ALLOWED_MODELS = new Set([...CANONICAL_MODELS, ...Object.keys(TARGET_MODEL_ALIASES)]);
 
 const UNIVERSAL_RULES = [
   "Preserve the user's original intent and meaningful domain language.",
@@ -58,7 +65,7 @@ function normalizePrompt(value) {
 
 function applyCorrectionMarkers(prompt) {
   const markerPattern =
-    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|scratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)|never mind|ignore that|disregard that|instead)\b[:,.\s-]*/gi;
+    /\b(?:actually,\s*never mind|actually\s+never mind|wait,\s*scratch that|scratch that|scratch\s+(?:the\s+)?(?:press release|linkedin post|linkedin article|instagram post|instagram caption|instagram captions|email|script|text message|stakeholder update)|never mind|ignore that|disregard that|instead(?!\s+of\b))\b[:,.\s-]*/gi;
   const matches = Array.from(prompt.matchAll(markerPattern));
 
   if (!matches.length) {
@@ -196,6 +203,10 @@ function truncateValue(value, maxLength = 220) {
 }
 
 function isStyleInstruction(segment) {
+  if (/\b(?:under|over|below|above|at least|no more than|less than|more than)\s+\d|\b\d+\s*(?:words?|characters?|pages?|seconds?|minutes?)\b/i.test(segment)) {
+    return false;
+  }
+
   return /\b(?:make it|keep it|tone|voice|vibe|style|energy|should sound|should be|sound(?:s)? like|feel(?:s)? like|not corporate|no slang)\b/i.test(segment);
 }
 
@@ -411,11 +422,21 @@ function inferDeliverableLabels(text) {
   return DELIVERABLE_PATTERNS.filter(([pattern]) => pattern.test(text)).map(([, label]) => label);
 }
 
+function inferRejectedDeliverableLabels(text) {
+  const rejectedPhrases = Array.from(
+    text.matchAll(/\binstead of\s+(?:(?:a|an|the)\s+)?([^.!?;,]+?)(?=\s+(?:about|for|to|with|using|that|because)\b|[.!?;,]|$)/gi),
+    (match) => match[1],
+  );
+
+  return normalizeList(rejectedPhrases.flatMap((phrase) => inferDeliverableLabels(phrase)));
+}
+
 function inferDeliverable(roughPrompt, taskClauses = inferTaskClauses(roughPrompt)) {
+  const rejectedDeliverables = new Set(inferRejectedDeliverableLabels(roughPrompt));
   const deliverables = [
     ...inferDeliverableLabels(roughPrompt),
     ...taskClauses.flatMap((clause) => inferDeliverableLabels(clause)),
-  ];
+  ].filter((deliverable) => !rejectedDeliverables.has(deliverable));
 
   return removeSubsumedValues(normalizeList(deliverables));
 }
@@ -672,7 +693,11 @@ function inferUserContext(roughPrompt, academicContext = detectAcademicContext(r
 }
 
 function inferStyleByTask(roughPrompt, taskClauses) {
-  const styleClauses = normalizeList(splitPromptSegments(roughPrompt).filter(isStyleInstruction));
+  const styleClauses = normalizeList(
+    splitPromptSegments(roughPrompt)
+      .filter(isStyleInstruction)
+      .filter((segment) => !/^(?:make|keep)\s+it\b/i.test(segment) || inferDeliverableLabels(segment).length === 0),
+  );
 
   if (!styleClauses.length) return [];
 
@@ -955,11 +980,13 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
 function modelGuidance(targetModel) {
   const guidance = {
     "GPT-5.5":
-      "Use precise hierarchy and a concise internal step-by-step execution plan. Do not reveal hidden reasoning; show only the useful final answer, assumptions, and deliverables.",
-    Claude:
-      "Use XML-style tags for high-recall structure, such as <context>, <style_tone>, <task>, <constraints>, and <output_format>. Keep nuance and constraints visible.",
-    Gemini:
-      "Use direct section labels, grounding in supplied context, and structured tables when they make planning, comparison, or execution easier to scan.",
+      "Use precise hierarchy, explicit deliverables, and a concise internal execution plan. Do not reveal hidden reasoning; show only the useful final answer, assumptions, and deliverables.",
+    "Claude Fable 5":
+      "Use high-recall structure with XML-style tags such as <context>, <style_tone>, <task>, <constraints>, and <output_format>. Keep nuance, long-horizon goals, assumptions, and constraints visible.",
+    "Claude Sonnet 4.6":
+      "Use XML-style tags for dependable structure, but bias toward concise, fast execution. Keep constraints visible and make the output easy to scan.",
+    "Gemini 3.5 Flash":
+      "Use direct section labels, grounding in supplied context, and structured tables when they make planning, comparison, prioritization, or execution easier to scan.",
   };
 
   return guidance[targetModel];
@@ -968,6 +995,11 @@ function modelGuidance(targetModel) {
 function normalizeFramework(value) {
   const framework = String(value || "");
   return FRAMEWORK_ALIASES[framework] || framework;
+}
+
+function normalizeTargetModel(value) {
+  const targetModel = String(value || "");
+  return TARGET_MODEL_ALIASES[targetModel] || targetModel;
 }
 
 function baseSections({ roughPrompt, targetModel }) {
@@ -1195,7 +1227,7 @@ ${sections.model}`;
 }
 
 function formatForTargetModel(prompt, targetModel) {
-  if (targetModel === "Claude") {
+  if (targetModel.startsWith("Claude")) {
     return `<execution_prompt>
 <instruction>
 Use the following prompt to produce a complete answer in one run. Preserve the XML-style structure and treat each tag as a high-priority instruction block.
@@ -1207,8 +1239,8 @@ ${prompt}
 </execution_prompt>`;
   }
 
-  if (targetModel === "Gemini") {
-    return `# Gemini Execution Prompt
+  if (targetModel.startsWith("Gemini")) {
+    return `# ${targetModel} Execution Prompt
 
 Use the following structured prompt. When the task involves planning, comparison, scheduling, research, or prioritization, use tables to make the output easy to scan.
 
@@ -1418,12 +1450,198 @@ Quality repair additions:
 ${additions.join("\n\n")}`;
 }
 
+const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
+const DEFAULT_OPENAI_MODEL = "gpt-5.5";
+
+function responseWithoutMeta(result) {
+  const { meta, ...publicResult } = result;
+  return publicResult;
+}
+
+function buildAiDeveloperPrompt() {
+  return `You are the model-backed generation layer for Prompt Architect Studio.
+
+Turn the user's rough note into a polished, paste-ready AI prompt for the selected target model.
+
+Hard requirements:
+- Return only the final prompt. Do not include commentary about your process.
+- Use the deterministic draft as a baseline, but improve clarity, domain judgment, wording, and output structure.
+- Preserve every deliverable, task, source variable, constraint, prohibited topic, prohibited task, conditional trigger, and style cue from the parse object.
+- Keep the prompt ready to paste into the target model and capable of producing a complete answer in one run.
+- If the parse object has guardrailMode "student_learning_support", preserve the learning-support boundaries and do not create instructions for submit-ready academic work.
+- Do not invent private facts, metrics, citations, client details, product claims, or sensitive data.
+- If the request is missing ordinary low-risk details, use assumptions or placeholders rather than asking setup questions.`;
+}
+
+function buildAiUserInput({ originalPrompt, deterministicResult }) {
+  return JSON.stringify(
+    {
+      originalPrompt,
+      framework: deterministicResult.framework,
+      targetModel: deterministicResult.targetModel,
+      parse: deterministicResult.meta.parse,
+      deterministicDraft: deterministicResult.prompt,
+      task: "Rewrite the deterministic draft into a stronger final AI-ready prompt while preserving the parse object exactly.",
+    },
+    null,
+    2,
+  );
+}
+
+function extractResponseText(responseBody) {
+  if (typeof responseBody?.output_text === "string") {
+    return responseBody.output_text.trim();
+  }
+
+  const textParts = [];
+
+  (responseBody?.output || []).forEach((outputItem) => {
+    (outputItem?.content || []).forEach((contentItem) => {
+      if (typeof contentItem?.text === "string") {
+        textParts.push(contentItem.text);
+      }
+    });
+  });
+
+  return textParts.join("\n").trim();
+}
+
+async function callOpenAiResponses({ apiKey, model, originalPrompt, deterministicResult, fetchImpl }) {
+  const response = await fetchImpl(OPENAI_RESPONSES_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model,
+      reasoning: { effort: "low" },
+      max_output_tokens: 3200,
+      input: [
+        {
+          role: "developer",
+          content: buildAiDeveloperPrompt(),
+        },
+        {
+          role: "user",
+          content: buildAiUserInput({ originalPrompt, deterministicResult }),
+        },
+      ],
+    }),
+  });
+
+  let responseBody = null;
+  try {
+    responseBody = await response.json();
+  } catch {
+    responseBody = null;
+  }
+
+  if (!response.ok) {
+    const message = responseBody?.error?.message || `OpenAI request failed with status ${response.status}.`;
+    throw new Error(message);
+  }
+
+  const prompt = extractResponseText(responseBody);
+  if (prompt.length < 8) {
+    throw new Error("OpenAI response did not include usable prompt text.");
+  }
+
+  return prompt;
+}
+
+export async function architectPromptHybrid(payload, options = {}) {
+  const includeMeta = payload.includeMeta === true;
+  const originalPrompt = normalizePrompt(payload.roughPrompt);
+  const deterministicResult = architectPrompt({ ...payload, includeMeta: true });
+
+  if (deterministicResult.error) {
+    return deterministicResult;
+  }
+
+  const env = options.env || {};
+  const apiKey = env.OPENAI_API_KEY;
+  const providerModel = env.OPENAI_MODEL || DEFAULT_OPENAI_MODEL;
+  const fetchImpl = options.fetchImpl || fetch;
+
+  if (!apiKey) {
+    const fallbackResult = {
+      ...deterministicResult,
+      engine: {
+        mode: "rule_based_fallback",
+        provider: "local",
+        reason: "missing_openai_api_key",
+      },
+    };
+    return includeMeta ? fallbackResult : responseWithoutMeta(fallbackResult);
+  }
+
+  try {
+    const aiPrompt = await callOpenAiResponses({
+      apiKey,
+      model: providerModel,
+      originalPrompt,
+      deterministicResult,
+      fetchImpl,
+    });
+    const aiCritique = critiquePrompt(aiPrompt, deterministicResult.meta.parse);
+    const repairedPrompt = repairPrompt(aiPrompt, deterministicResult.meta.parse, aiCritique);
+    const finalCritique = repairedPrompt === aiPrompt ? aiCritique : critiquePrompt(repairedPrompt, deterministicResult.meta.parse);
+    const result = {
+      prompt: repairedPrompt,
+      framework: deterministicResult.framework,
+      targetModel: deterministicResult.targetModel,
+      engine: {
+        mode: "hybrid",
+        provider: "openai",
+        model: providerModel,
+      },
+    };
+
+    if (includeMeta) {
+      result.meta = {
+        ...deterministicResult.meta,
+        critique: finalCritique,
+        repaired: repairedPrompt !== aiPrompt,
+        deterministicCritique: deterministicResult.meta.critique,
+        ai: {
+          provider: "openai",
+          model: providerModel,
+        },
+      };
+    }
+
+    return result;
+  } catch (error) {
+    const fallbackResult = {
+      ...deterministicResult,
+      engine: {
+        mode: "rule_based_fallback",
+        provider: "openai",
+        model: providerModel,
+        reason: "provider_error",
+      },
+    };
+
+    if (includeMeta) {
+      fallbackResult.meta.ai = {
+        provider: "openai",
+        model: providerModel,
+        error: error.message,
+      };
+    }
+
+    return includeMeta ? fallbackResult : responseWithoutMeta(fallbackResult);
+  }
+}
+
 export function architectPrompt(payload) {
   const originalPrompt = normalizePrompt(payload.roughPrompt);
   const preprocess = preprocessPrompt(payload.roughPrompt);
   const roughPrompt = preprocess.prompt;
   const framework = normalizeFramework(payload.framework);
-  const targetModel = String(payload.targetModel || "");
+  const rawTargetModel = String(payload.targetModel || "");
+  const targetModel = normalizeTargetModel(rawTargetModel);
   const includeMeta = payload.includeMeta === true;
 
   if (roughPrompt.length < 8) {
@@ -1434,7 +1652,7 @@ export function architectPrompt(payload) {
     return { error: "Select a supported framework." };
   }
 
-  if (!ALLOWED_MODELS.has(targetModel)) {
+  if (!ALLOWED_MODELS.has(rawTargetModel) || !CANONICAL_MODELS.includes(targetModel)) {
     return { error: "Select a supported target model." };
   }
 
@@ -1486,7 +1704,7 @@ export function architectPrompt(payload) {
 export async function onRequestPost(context) {
   try {
     const payload = await context.request.json();
-    const result = architectPrompt(payload);
+    const result = await architectPromptHybrid(payload, { env: context.env });
 
     if (result.error) {
       return jsonResponse({ error: result.error }, 400);
@@ -1503,6 +1721,6 @@ export function onRequestGet() {
     name: "Prompt Architect Studio API",
     usage: "POST /api/architect with roughPrompt, framework, and targetModel.",
     frameworks: Array.from(ALLOWED_FRAMEWORKS),
-    models: Array.from(ALLOWED_MODELS),
+    models: CANONICAL_MODELS,
   });
 }

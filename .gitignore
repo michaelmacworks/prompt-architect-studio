@@ -8,3 +8,4 @@ z not used/
 .env.*
 !.env.example
 *.local
+*.zip

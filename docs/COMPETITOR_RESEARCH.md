@@ -132,7 +132,7 @@ Prompt Architect Studio should be different in five ways:
    The transformation should preserve what the user actually wants before making the prompt sound better.
 
 3. **Model-aware, not one-size-fits-all**  
-   GPT-5.5, Claude, and Gemini should receive slightly different prompt shaping.
+   GPT-5.5, Claude Fable/Sonnet, and Gemini 3.5 Flash should receive slightly different prompt shaping.
 
 4. **Focused workspace, not giant library**  
    The MVP should avoid template bloat, marketplaces, feeds, and community noise.

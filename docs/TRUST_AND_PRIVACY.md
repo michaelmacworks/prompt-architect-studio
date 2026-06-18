@@ -19,6 +19,7 @@ For the MVP, the app should aim for:
 - No public sharing by default.
 - No unnecessary data collection.
 - Clear warning not to paste secrets.
+- Accurate disclosure that prompts may be sent to OpenAI when model-backed generation is enabled.
 
 ## Required User-Facing Guidance
 
@@ -34,7 +35,7 @@ If prompts are not stored:
 
 If API providers process the prompt:
 
-> Your prompt may be sent to the selected AI/API provider to generate the result.
+> Your prompt may be sent to OpenAI or another configured AI/API provider to generate the result.
 
 This language must match the actual implementation.
 

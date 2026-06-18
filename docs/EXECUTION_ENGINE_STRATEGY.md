@@ -310,27 +310,29 @@ Avoid:
 
 - Exposing unnecessary chain-of-thought.
 
-### Claude
+### Claude Fable 5 / Claude Sonnet 4.6
 
 Use:
 
 - XML-style tags such as `<context>`, `<style_tone>`, `<task>`, `<constraints>`, and `<output_format>`.
 - Nuanced natural-language instructions.
 - Visible constraints and assumptions.
+- Fable for the highest available Claude capability and long-horizon work; Sonnet for faster everyday execution.
 
-### Gemini
+### Gemini 3.5 Flash
 
 Use:
 
 - Direct section labels.
 - Grounding in supplied context.
 - Tables when the task involves planning, comparison, scheduling, research, or prioritization.
+- Gemini 3.5 Flash as the default Gemini preset for agentic and coding-heavy work.
 
 ## One-Click Goal
 
 The success target is:
 
-> A user pastes a messy idea, clicks Transform, and receives a prompt they can paste into GPT-5.5, Claude, or Gemini that immediately produces the desired work product.
+> A user pastes a messy idea, clicks Transform, and receives a prompt they can paste into GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash that immediately produces the desired work product.
 
 Example:
 
@@ -345,7 +347,7 @@ Current implementation direction:
 - Power-user styles are available in a compact advanced control.
 - The API maps outcome labels and legacy aliases to internal frameworks.
 - Prompt generation now emphasizes light assumptions, style extraction, vibe preservation, and one-run execution.
-- Model formatting differs for GPT-5.5, Claude, and Gemini.
+- Model formatting differs for GPT-5.5, Claude Fable/Sonnet, and Gemini 3.5 Flash.
 
 ## Acceptance Criteria
 

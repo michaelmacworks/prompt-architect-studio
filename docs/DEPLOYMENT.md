@@ -31,6 +31,16 @@ Backend:
 
 - Cloudflare Pages Function at `functions/api/architect.js`
 - Public route: `POST /api/architect`
+- Hybrid prompt engine with deterministic fallback and optional OpenAI generation.
+
+## Environment Variables
+
+Set these in Cloudflare Pages before using the model-backed engine:
+
+- `OPENAI_API_KEY` - required for OpenAI-backed prompt generation.
+- `OPENAI_MODEL` - optional; defaults to `gpt-5.5`.
+
+If `OPENAI_API_KEY` is missing or the provider request fails, `/api/architect` returns the deterministic rule-based prompt instead of failing the user request.
 
 ## Routing
 
@@ -56,11 +66,13 @@ Before deploying:
 3. Confirm `dist/` is generated.
 4. Confirm `_headers` and `_redirects` appear inside `dist/`.
 5. Confirm `/api/architect` works in Cloudflare Pages preview.
-6. Review trust/privacy copy before public launch.
+6. Set `OPENAI_API_KEY` if the deployed app should use model-backed generation.
+7. Review trust/privacy copy before public launch.
 
 ## Current MVP Notes
 
 - No login.
 - No saved prompt history.
 - No database.
-- No external LLM provider is connected yet; prompt transformation is handled by the current deterministic Pages Function.
+- OpenAI-backed generation is available when `OPENAI_API_KEY` is configured.
+- The deterministic Pages Function remains the fallback path when OpenAI is unavailable.

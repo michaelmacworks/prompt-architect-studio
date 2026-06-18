@@ -62,8 +62,9 @@ Long-term, Prompt Architect Studio should become a prompt quality system rather 
    - Agentic-Goal
 3. User selects a target model:
    - GPT-5.5
-   - Claude
-   - Gemini
+   - Claude Fable 5
+   - Claude Sonnet 4.6
+   - Gemini 3.5 Flash
 4. The API applies the Universal Prompt Architect rules.
 5. The app returns a clean, copyable prompt.
 

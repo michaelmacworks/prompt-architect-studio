@@ -6,7 +6,7 @@ const siteUrl = "https://promptarchitectstudio.com";
 const defaultSeo = {
   title: "Prompt Architect Studio | Model-Ready AI Prompt Builder",
   description:
-    "Prompt Architect Studio turns rough ideas into structured, model-ready prompts for GPT, Claude, Gemini, and other leading AI tools.",
+    "Prompt Architect Studio turns rough ideas into structured, model-ready prompts for current GPT, Claude, Gemini, and other leading AI tools.",
 };
 
 const routeSeo = {
@@ -79,15 +79,19 @@ const frameworks = [
 const models = [
   {
     value: "GPT-5.5",
-    description: "Precise hierarchy, clear deliverables, strong constraints, and production-ready output.",
+    description: "OpenAI flagship shaping for complex reasoning, coding, clear deliverables, and production-ready output.",
   },
   {
-    value: "Claude",
-    description: "Natural language clarity, nuance, careful assumptions, and visible constraints.",
+    value: "Claude Fable 5",
+    description: "Anthropic's top widely released Claude shaping for demanding reasoning, long-horizon goals, and nuance.",
   },
   {
-    value: "Gemini",
-    description: "Direct section labels, scannable structure, grounding, and clear organization.",
+    value: "Claude Sonnet 4.6",
+    description: "Claude shaping for speed, clarity, visible constraints, and dependable everyday work.",
+  },
+  {
+    value: "Gemini 3.5 Flash",
+    description: "Gemini shaping for grounded sections, tables, agentic tasks, coding, and scan-friendly structure.",
   },
 ];
 
@@ -102,7 +106,7 @@ const examples = [
 const workflowSteps = [
   ["Paste a rough idea", "Start with the messy version. Notes, fragments, or a half-formed task are enough."],
   ["Choose a framework", "Use Dynamic by default, or pick CO-STAR, RTF, RASC, or Agentic-Goal for a known shape."],
-  ["Select your model", "Tune the prompt for GPT-5.5, Claude, or Gemini before you run it."],
+  ["Select your model", "Tune the prompt for GPT-5.5, Claude Fable/Sonnet, or Gemini 3.5 before you run it."],
   ["Copy the result", "Take the structured prompt into your AI tool and use it as your next instruction."],
 ];
 
@@ -166,10 +170,11 @@ const subpages = {
     eyebrow: "Trust",
     title: "Use the tool with care.",
     intro:
-      "This MVP has no account and no saved prompt history, but users should still avoid pasting sensitive or regulated information.",
+      "This MVP has no account and no saved prompt history. When AI generation is enabled, prompts are processed by an AI/API provider to generate the result.",
     cta: ["Return to the studio", "/#studio"],
     sections: [
       ["Privacy posture", "Do not paste passwords, API keys, confidential client data, regulated data, or private personal information."],
+      ["AI processing", "Prompts may be sent to OpenAI for generation, then checked locally against the app's preservation and guardrail rules."],
       ["Output responsibility", "Generated prompts are provided as-is and should be reviewed before use."],
       ["Future policy page", "A full privacy, disclaimer, and terms page should be added before public launch."],
     ],
@@ -294,8 +299,8 @@ function App() {
           <p className="eyebrow">Model-aware prompt workbench</p>
           <h1 id="hero-title">Turn messy ideas into model-ready prompts.</h1>
           <p className="hero-lede">
-            Choose a framework, choose a model, and get a structured prompt you can paste into GPT-5.5,
-            Claude, or Gemini.
+            Choose a framework, choose a current model family, and get a structured prompt you can paste into
+            GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash.
           </p>
           <div className="hero-actions">
             <a className="primary-link" href="#studio">
@@ -507,8 +512,8 @@ function App() {
           <h2 id="trust-title">No account. No saved prompt history in this MVP.</h2>
         </div>
         <p>
-          Prompts are processed to generate your output. Keep secrets, regulated data, and confidential
-          client details out of the input.
+          Prompts may be processed by an AI/API provider to generate your output. Keep secrets,
+          regulated data, and confidential client details out of the input.
         </p>
       </section>
 
@@ -565,7 +570,7 @@ function SiteFooter() {
         <div className="footer-disclaimer">
           <p>
             Basic disclaimer: do not paste sensitive, confidential, regulated, or private information.
-            Outputs are provided as-is and should be reviewed before use.
+            Prompts may be processed by an AI/API provider. Outputs are provided as-is and should be reviewed before use.
           </p>
           <p>
             Prompt Architect Studio is not responsible for decisions, claims, or actions taken from generated

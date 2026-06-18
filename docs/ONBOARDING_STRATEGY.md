@@ -31,7 +31,7 @@ The hero should answer:
 Suggested structure:
 
 - Headline: “Turn messy ideas into model-ready prompts.”
-- Subcopy: “Choose a framework, choose a model, and get a structured prompt you can paste into GPT-5.5, Claude, or Gemini.”
+- Subcopy: “Choose a framework, choose a current model family, and get a structured prompt you can paste into GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash.”
 - CTA: “Start architecting”
 
 ### 2. Example Prompt

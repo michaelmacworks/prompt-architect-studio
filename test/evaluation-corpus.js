@@ -387,6 +387,18 @@ export const evaluationCorpus = [
     },
   },
   {
+    name: "instead of phrase is not treated as correction marker",
+    roughPrompt:
+      "Write a friendly email instead of a press release about our bakery hours. Keep it warm and neighborly.",
+    expected: {
+      deliverables: ["email"],
+      absentDeliverables: ["press release"],
+      styleByTask: [/warm and neighborly/i],
+      correctionApplied: false,
+      absentFailureTypes: ["missing_deliverable", "style_flattened"],
+    },
+  },
+  {
     name: "task correction preserves product anchors",
     roughPrompt:
       "Write a press release for Titan Battery with 15% efficiency gains and a $499 launch price. Actually, scratch the press release, make it a LinkedIn article for investors.",
