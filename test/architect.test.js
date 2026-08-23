@@ -146,6 +146,21 @@ test("extracts platform-only social deliverables and tight negative constraints"
   assert.ok(result.meta.parse.styleByTask.some(({ style }) => /cozy but not cheesy/i.test(style)));
 });
 
+test("promotes explicit natural-language audience clauses", () => {
+  const result = architectPrompt({
+    roughPrompt:
+      "Write something for our launch. Maybe LinkedIn and email. Mention no discount. Audience is small law firms, tone smart not hype, include next steps.",
+    framework: "Dynamic",
+    targetModel: "GPT-5.6 Sol",
+    includeMeta: true,
+  });
+
+  assert.ok(result.meta.parse.variables.some((item) => /small law firms/i.test(item)));
+  assert.match(result.prompt, /Audience: small law firms/i);
+  assert.ok(result.meta.parse.deliverables.includes("email"));
+  assert.ok(result.meta.parse.deliverables.includes("next steps"));
+});
+
 test("actually no correction supports learning-safe pivot", () => {
   const result = architectPrompt({
     roughPrompt:

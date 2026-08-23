@@ -503,6 +503,10 @@ function extractRegexValues(text, patterns) {
   return normalizeList(patterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[0])));
 }
 
+function extractRegexCaptures(text, patterns) {
+  return normalizeList(patterns.flatMap((pattern) => Array.from(text.matchAll(pattern), (match) => match[1] || match[0])));
+}
+
 function extractQuotedPhrases(text) {
   return normalizeList(Array.from(text.matchAll(/["'“”‘’]([^"'“”‘’]{2,90})["'“”‘’]/g), (match) => match[1]));
 }
@@ -601,8 +605,15 @@ function extractAnchorDetails(roughPrompt) {
 }
 
 function extractAudienceDetails(roughPrompt) {
-  return uniqueValues(
-    matchTerms(roughPrompt, [
+  const explicitAudiences = extractRegexCaptures(roughPrompt, [
+    /\b(?:audience|target audience|intended audience)\s*(?:is|are|:|=)\s*([^.!?,;\n]{3,80})/gi,
+    /\b(?:for|to)\s+(small\s+law\s+firms|law\s+firms|legal\s+teams|in-house\s+counsel)\b/gi,
+  ]);
+
+  return removeSubsumedValues(
+    normalizeList([
+      ...explicitAudiences,
+      ...matchTerms(roughPrompt, [
       "beta users",
       "store managers",
       "support agents",
@@ -615,6 +626,11 @@ function extractAudienceDetails(roughPrompt) {
       "employees",
       "staff",
       "engineering managers",
+      "small law firms",
+      "law firms",
+      "legal teams",
+      "in-house counsel",
+    ]),
     ]),
   );
 }
@@ -895,8 +911,9 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
     ]).map(titleCase),
     ),
   );
-  const audiences = uniqueValues(
-    matchTerms(roughPrompt, [
+  const audiences = uniqueValues([
+    ...extractAudienceDetails(roughPrompt),
+    ...matchTerms(roughPrompt, [
       "millennial",
       "Gen Z",
       "founders",
@@ -921,7 +938,7 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
       "clients",
       "executives",
     ]),
-  );
+  ]);
   const tone = uniqueValues(
     matchTerms(roughPrompt, [
       "Brooklyn Sister",
