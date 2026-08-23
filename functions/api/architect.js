@@ -1,10 +1,13 @@
 const ALLOWED_FRAMEWORKS = new Set(["Dynamic", "CO-STAR", "RTF", "RASC", "Agentic-Goal"]);
-const CANONICAL_MODELS = ["GPT-5.5", "Claude Fable 5", "Claude Sonnet 4.6", "Gemini 3.5 Flash"];
+const CANONICAL_MODELS = ["GPT-5.6 Sol", "Claude Fable 5", "Claude Sonnet 5", "Gemini 3.7 Flash"];
 const TARGET_MODEL_ALIASES = {
+  "GPT-5.5": "GPT-5.6 Sol",
   Claude: "Claude Fable 5",
   "Claude Opus 4.8": "Claude Fable 5",
-  Gemini: "Gemini 3.5 Flash",
-  "Gemini 3.1 Pro": "Gemini 3.5 Flash",
+  "Claude Sonnet 4.6": "Claude Sonnet 5",
+  Gemini: "Gemini 3.7 Flash",
+  "Gemini 3.1 Pro": "Gemini 3.7 Flash",
+  "Gemini 3.5 Flash": "Gemini 3.7 Flash",
 };
 const ALLOWED_MODELS = new Set([...CANONICAL_MODELS, ...Object.keys(TARGET_MODEL_ALIASES)]);
 
@@ -382,6 +385,7 @@ const DELIVERABLE_PATTERNS = [
   [/\btemplates?\b/i, "template"],
   [/\bexamples?\b/i, "examples"],
   [/\bFAQs?\b|\bfrequently asked questions?\b/i, "FAQ"],
+  [/\bdiscussion questions?\b/i, "discussion questions"],
   [/\brecommendations?\b|\brecommend\b/i, "recommendations"],
   [/\bideas?\b/i, "ideas"],
   [/\boptions?\b/i, "options"],
@@ -389,6 +393,8 @@ const DELIVERABLE_PATTERNS = [
   [/\bheadlines?\b/i, "headlines"],
   [/\btaglines?\b/i, "taglines"],
   [/\bsteps?\b/i, "steps"],
+  [/\btables?\b/i, "table"],
+  [/\bself[-\s]?quiz\b|\bquiz\b/i, "self quiz"],
   [/\bautomation prompt\b/i, "automation prompt"],
   [/\blesson plan\b/i, "lesson plan"],
   [/\bnewsletter\b/i, "newsletter plan"],
@@ -397,6 +403,7 @@ const DELIVERABLE_PATTERNS = [
   [/\bpost\b/i, "post"],
   [/\blanding page\b/i, "landing page"],
   [/\bcampaign brief\b/i, "campaign brief"],
+  [/\bexec(?:utive)? brief\b/i, "executive brief"],
   [/\bcampaign\b/i, "campaign brief"],
   [/\bsop\b/i, "SOP"],
   [/\bmeeting notes\b/i, "meeting summary"],
@@ -430,7 +437,9 @@ function inferRejectedDeliverableLabels(text) {
     (match) => match[1],
   );
 
-  return normalizeList(rejectedPhrases.flatMap((phrase) => inferDeliverableLabels(phrase)));
+  const prohibitedPhrases = extractProhibitedTasks(text);
+
+  return normalizeList([...rejectedPhrases, ...prohibitedPhrases].flatMap((phrase) => inferDeliverableLabels(phrase)));
 }
 
 function inferDeliverable(roughPrompt, taskClauses = inferTaskClauses(roughPrompt)) {
@@ -566,6 +575,17 @@ function extractSpecificDetails(roughPrompt) {
 function extractContextDetails(roughPrompt) {
   return extractRegexValues(roughPrompt, [
     /\b[a-z][a-z0-9-]*(?:\s+[a-z][a-z0-9-]*){0,3}\s+(?:outage|incident|error|bug|launch|rollout|migration|delay|crash)\b/gi,
+    /\bright\s+Solid\s+Rocket\s+Motor\b/gi,
+    /\baft\s+field\s+joint\b/gi,
+    /\bpressure\s+seal\b/gi,
+    /\bO-rings?\b/gi,
+    /\bO-ring\s+(?:erosion|blow-by)\b/gi,
+    /\bblow-by\b/gi,
+    /\bprevious\s+flights\s+got\s+away\s+with\s+it\b/gi,
+    /\bcommunication\s+failures?\b/gi,
+    /\bdecision\s+(?:process|failures?)\b/gi,
+    /\bcontractor\s+concerns?\b/gi,
+    /\btechnical\s+cause\s+vs\s+organizational\s+cause\b/gi,
   ]);
 }
 
@@ -594,6 +614,7 @@ function extractAudienceDetails(roughPrompt) {
       "prospects",
       "employees",
       "staff",
+      "engineering managers",
     ]),
   );
 }
@@ -1019,13 +1040,13 @@ function inferFactSheet(roughPrompt, parse = createParseObject(roughPrompt)) {
 
 function modelGuidance(targetModel) {
   const guidance = {
-    "GPT-5.5":
+    "GPT-5.6 Sol":
       "Use precise hierarchy, explicit deliverables, and a concise internal execution plan. Do not reveal hidden reasoning; show only the useful final answer, assumptions, and deliverables.",
     "Claude Fable 5":
       "Use high-recall structure with XML-style tags such as <context>, <style_tone>, <task>, <constraints>, and <output_format>. Keep nuance, long-horizon goals, assumptions, and constraints visible.",
-    "Claude Sonnet 4.6":
-      "Use XML-style tags for dependable structure, but bias toward concise, fast execution. Keep constraints visible and make the output easy to scan.",
-    "Gemini 3.5 Flash":
+    "Claude Sonnet 5":
+      "Use XML-style tags for dependable structure, but bias toward concise, fast execution with strong reasoning. Keep constraints visible and make the output easy to scan.",
+    "Gemini 3.7 Flash":
       "Use direct section labels, grounding in supplied context, and structured tables when they make planning, comparison, prioritization, or execution easier to scan.",
   };
 
@@ -1287,7 +1308,7 @@ Use the following structured prompt. When the task involves planning, comparison
 ${prompt}`;
   }
 
-  return `# GPT-5.5 Execution Prompt
+  return `# ${targetModel} Execution Prompt
 
 Use the following structured prompt. Think through the task step by step internally, then return only the useful final answer, assumptions, and deliverables.
 
@@ -1491,7 +1512,7 @@ ${additions.join("\n\n")}`;
 }
 
 const OPENAI_RESPONSES_URL = "https://api.openai.com/v1/responses";
-const DEFAULT_OPENAI_MODEL = "gpt-5.5";
+const DEFAULT_OPENAI_MODEL = "gpt-5.6";
 
 function responseWithoutMeta(result) {
   const { meta, ...publicResult } = result;

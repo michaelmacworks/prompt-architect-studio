@@ -8,7 +8,7 @@ function runArchitect(roughPrompt, framework = "Dynamic") {
   return architectPrompt({
     roughPrompt,
     framework,
-    targetModel: "GPT-5.5",
+    targetModel: "GPT-5.6 Sol",
     includeMeta: true,
   });
 }
@@ -97,8 +97,34 @@ test("normalizes legacy model family labels to current presets", () => {
 
   assert.equal(claudeResult.targetModel, "Claude Fable 5");
   assert.match(claudeResult.prompt, /<execution_prompt>/i);
-  assert.equal(geminiResult.targetModel, "Gemini 3.5 Flash");
-  assert.match(geminiResult.prompt, /# Gemini 3\.5 Flash Execution Prompt/i);
+  assert.equal(geminiResult.targetModel, "Gemini 3.7 Flash");
+  assert.match(geminiResult.prompt, /# Gemini 3\.7 Flash Execution Prompt/i);
+});
+
+test("normalizes older specific model labels to current presets", () => {
+  const openAiResult = architectPrompt({
+    roughPrompt: "Create a concise launch checklist.",
+    framework: "RTF",
+    targetModel: "GPT-5.5",
+    includeMeta: true,
+  });
+  const sonnetResult = architectPrompt({
+    roughPrompt: "Create a concise customer reply.",
+    framework: "RTF",
+    targetModel: "Claude Sonnet 4.6",
+    includeMeta: true,
+  });
+  const geminiResult = architectPrompt({
+    roughPrompt: "Create a concise comparison table.",
+    framework: "RTF",
+    targetModel: "Gemini 3.5 Flash",
+    includeMeta: true,
+  });
+
+  assert.equal(openAiResult.targetModel, "GPT-5.6 Sol");
+  assert.match(openAiResult.prompt, /# GPT-5\.6 Sol Execution Prompt/i);
+  assert.equal(sonnetResult.targetModel, "Claude Sonnet 5");
+  assert.equal(geminiResult.targetModel, "Gemini 3.7 Flash");
 });
 
 test("extracts platform-only social deliverables and tight negative constraints", () => {
@@ -106,7 +132,7 @@ test("extracts platform-only social deliverables and tight negative constraints"
     roughPrompt:
       "Make something for my bakery, like maybe instagram and an email. We have sourdough bagels this Saturday 8-11, only 40 packs, cozy but not cheesy, dont mention discounts.",
     framework: "Dynamic",
-    targetModel: "GPT-5.5",
+    targetModel: "GPT-5.6 Sol",
     includeMeta: true,
   });
 
@@ -125,7 +151,7 @@ test("actually no correction supports learning-safe pivot", () => {
     roughPrompt:
       "Write my essay about Macbeth for 10th grade, actually no, help me understand the assignment and make a study plan. Teacher wants themes and quotes by Friday. Dont write it for me.",
     framework: "Dynamic",
-    targetModel: "Gemini 3.5 Flash",
+    targetModel: "Gemini 3.7 Flash",
     includeMeta: true,
   });
 
@@ -141,7 +167,7 @@ test("customer reply preserves names order numbers and tone", () => {
     roughPrompt:
       "Scratch the linkedin post. Need a customer reply for a ceramics order that arrived cracked. Customer is Maria, order 1842, replacement ships Tuesday, keep it apologetic but calm, dont blame the carrier, include next steps and a short subject line.",
     framework: "CO-STAR",
-    targetModel: "Claude Sonnet 4.6",
+    targetModel: "Claude Sonnet 5",
     includeMeta: true,
   });
 
@@ -152,6 +178,25 @@ test("customer reply preserves names order numbers and tone", () => {
   assert.ok(result.meta.parse.variables.some((item) => /order 1842/i.test(item)));
   assert.ok(result.meta.parse.styleByTask.some(({ style }) => /apologetic but calm/i.test(style)));
   assert.ok(result.meta.parse.forbiddenActions.some((item) => /dont blame the carrier/i.test(item)));
+});
+
+test("preserves technical anchors in reputable case-study prompts", () => {
+  const result = architectPrompt({
+    roughPrompt:
+      "Need a prompt for an exec brief about Challenger. Use Rogers Commission facts: Jan 28 1986 launch, right Solid Rocket Motor aft field joint pressure seal failed, O-ring erosion/blow-by had been seen before, managers normalized the risk because previous flights got away with it. Make it sober, not sensational, include root causes, decision failures, and 5 prevention lessons. Do not invent quotes.",
+    framework: "Dynamic",
+    targetModel: "GPT-5.6 Sol",
+    includeMeta: true,
+  });
+
+  assert.ok(result.meta.parse.deliverables.includes("executive brief"));
+  assert.ok(result.meta.parse.variables.some((item) => /right Solid Rocket Motor/i.test(item)));
+  assert.ok(result.meta.parse.variables.some((item) => /O-ring erosion/i.test(item)));
+  assert.ok(result.meta.parse.variables.some((item) => /previous flights got away with it/i.test(item)));
+  assert.match(result.prompt, /right Solid Rocket Motor/i);
+  assert.match(result.prompt, /O-ring erosion/i);
+  assert.match(result.prompt, /previous flights got away with it/i);
+  assert.match(result.prompt, /Do not invent quotes/i);
 });
 
 test("hybrid architect uses provider output and repairs dropped constraints", async () => {
@@ -171,13 +216,13 @@ test("hybrid architect uses provider output and repairs dropped constraints", as
     {
       roughPrompt: "Create an Instagram post for a candle sale, but do not mention pricing. Make it cozy.",
       framework: "Dynamic",
-      targetModel: "GPT-5.5",
+      targetModel: "GPT-5.6 Sol",
       includeMeta: true,
     },
     {
       env: {
         OPENAI_API_KEY: "test-key",
-        OPENAI_MODEL: "gpt-5.5",
+        OPENAI_MODEL: "gpt-5.6",
       },
       fetchImpl,
     },
