@@ -264,7 +264,7 @@ The main workflow should stay clean.
 Default:
 
 - Prompt style: Auto Execute.
-- Target model: GPT-5.5.
+- Target model: GPT-5.6 Sol.
 - Primary action: Transform Prompt.
 
 Power-user controls should remain available, but they should not dominate the first-use experience.
@@ -297,7 +297,7 @@ If the user gives a vibe, the output prompt must make that vibe visible.
 
 The app should not only change prompt content by model. It should adapt formatting to model strengths.
 
-### GPT-5.5
+### GPT-5.6 Sol
 
 Use:
 
@@ -310,7 +310,7 @@ Avoid:
 
 - Exposing unnecessary chain-of-thought.
 
-### Claude Fable 5 / Claude Sonnet 4.6
+### Claude Fable 5 / Claude Sonnet 5
 
 Use:
 
@@ -319,20 +319,20 @@ Use:
 - Visible constraints and assumptions.
 - Fable for the highest available Claude capability and long-horizon work; Sonnet for faster everyday execution.
 
-### Gemini 3.5 Flash
+### Gemini 3.7 Flash
 
 Use:
 
 - Direct section labels.
 - Grounding in supplied context.
 - Tables when the task involves planning, comparison, scheduling, research, or prioritization.
-- Gemini 3.5 Flash as the default Gemini preset for agentic and coding-heavy work.
+- Gemini 3.7 Flash as the default Gemini preset for agentic and coding-heavy work.
 
 ## One-Click Goal
 
 The success target is:
 
-> A user pastes a messy idea, clicks Transform, and receives a prompt they can paste into GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash that immediately produces the desired work product.
+> A user pastes a messy idea, clicks Transform, and receives a prompt they can paste into GPT-5.6 Sol, Claude Fable or Sonnet 5, or Gemini 3.7 Flash that immediately produces the desired work product.
 
 Example:
 
@@ -347,7 +347,7 @@ Current implementation direction:
 - Power-user styles are available in a compact advanced control.
 - The API maps outcome labels and legacy aliases to internal frameworks.
 - Prompt generation now emphasizes light assumptions, style extraction, vibe preservation, and one-run execution.
-- Model formatting differs for GPT-5.5, Claude Fable/Sonnet, and Gemini 3.5 Flash.
+- Model formatting differs for GPT-5.6 Sol, Claude Fable/Sonnet 5, and Gemini 3.7 Flash.
 
 ## Acceptance Criteria
 

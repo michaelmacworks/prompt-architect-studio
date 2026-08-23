@@ -288,7 +288,7 @@ This makes the engine feel transparent without exposing prompt-engineering jargo
 
 Model selection can feel like stamping the prompt for a destination:
 
-- GPT-5.5: structured blueprint stamp.
+- GPT-5.6 Sol: structured blueprint stamp.
 - Claude: XML-tag stamp.
 - Gemini: table/grid stamp.
 

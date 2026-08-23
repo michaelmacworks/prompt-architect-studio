@@ -101,7 +101,7 @@ Agentic-Goal defines:
 
 Different models respond differently to structure.
 
-The same task may benefit from different prompt emphasis depending on whether the user is working with GPT-5.5, Claude Fable/Sonnet, or Gemini 3.5 Flash.
+The same task may benefit from different prompt emphasis depending on whether the user is working with GPT-5.6 Sol, Claude Fable/Sonnet 5, or Gemini 3.7 Flash.
 
 Examples:
 

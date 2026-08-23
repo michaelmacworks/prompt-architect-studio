@@ -72,7 +72,7 @@ Headline:
 
 Supporting copy:
 
-> Choose a framework, choose a current model family, and get a structured prompt you can paste into GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash.
+> Choose a framework, choose a current model family, and get a structured prompt you can paste into GPT-5.6 Sol, Claude Fable or Sonnet 5, or Gemini 3.7 Flash.
 
 Primary CTA:
 

@@ -6,7 +6,7 @@ const siteUrl = "https://promptarchitectstudio.com";
 const defaultSeo = {
   title: "Prompt Architect Studio | Model-Ready AI Prompt Builder",
   description:
-    "Prompt Architect Studio turns rough ideas into structured, model-ready prompts for current GPT, Claude, Gemini, and other leading AI tools.",
+    "Prompt Architect Studio turns rough ideas into structured, model-ready prompts for current GPT-5.6, Claude 5, Gemini 3.7, and other leading AI tools.",
 };
 
 const routeSeo = {
@@ -78,7 +78,7 @@ const frameworks = [
 
 const models = [
   {
-    value: "GPT-5.5",
+    value: "GPT-5.6 Sol",
     description: "OpenAI flagship shaping for complex reasoning, coding, clear deliverables, and production-ready output.",
   },
   {
@@ -86,12 +86,12 @@ const models = [
     description: "Anthropic's top widely released Claude shaping for demanding reasoning, long-horizon goals, and nuance.",
   },
   {
-    value: "Claude Sonnet 4.6",
-    description: "Claude shaping for speed, clarity, visible constraints, and dependable everyday work.",
+    value: "Claude Sonnet 5",
+    description: "Claude shaping for speed, strong reasoning, visible constraints, and dependable everyday work.",
   },
   {
-    value: "Gemini 3.5 Flash",
-    description: "Gemini shaping for grounded sections, tables, agentic tasks, coding, and scan-friendly structure.",
+    value: "Gemini 3.7 Flash",
+    description: "Gemini shaping for grounded sections, tables, complex coding, agentic workflows, and scan-friendly structure.",
   },
 ];
 
@@ -106,7 +106,7 @@ const examples = [
 const workflowSteps = [
   ["Paste a rough idea", "Start with the messy version. Notes, fragments, or a half-formed task are enough."],
   ["Choose a framework", "Use Dynamic by default, or pick CO-STAR, RTF, RASC, or Agentic-Goal for a known shape."],
-  ["Select your model", "Tune the prompt for GPT-5.5, Claude Fable/Sonnet, or Gemini 3.5 before you run it."],
+  ["Select your model", "Tune the prompt for GPT-5.6 Sol, Claude Fable/Sonnet 5, or Gemini 3.7 before you run it."],
   ["Copy the result", "Take the structured prompt into your AI tool and use it as your next instruction."],
 ];
 
@@ -185,7 +185,7 @@ function App() {
   const [path, setPath] = useState(window.location.pathname);
   const [roughPrompt, setRoughPrompt] = useState("");
   const [framework, setFramework] = useState("Dynamic");
-  const [targetModel, setTargetModel] = useState("GPT-5.5");
+  const [targetModel, setTargetModel] = useState("GPT-5.6 Sol");
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -300,7 +300,7 @@ function App() {
           <h1 id="hero-title">Turn messy ideas into model-ready prompts.</h1>
           <p className="hero-lede">
             Choose a framework, choose a current model family, and get a structured prompt you can paste into
-            GPT-5.5, Claude Fable or Sonnet, or Gemini 3.5 Flash.
+            GPT-5.6 Sol, Claude Fable or Sonnet 5, or Gemini 3.7 Flash.
           </p>
           <div className="hero-actions">
             <a className="primary-link" href="#studio">

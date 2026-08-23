@@ -275,7 +275,7 @@ Best for:
 
 ## Model-Specific Standards
 
-### GPT-5.5
+### GPT-5.6 Sol
 
 Prompt should emphasize:
 
@@ -284,7 +284,7 @@ Prompt should emphasize:
 - Strong constraints.
 - Production-ready output.
 
-### Claude Fable 5 / Claude Sonnet 4.6
+### Claude Fable 5 / Claude Sonnet 5
 
 Prompt should emphasize:
 
@@ -294,7 +294,7 @@ Prompt should emphasize:
 - Careful handling of assumptions.
 - Visible constraints.
 
-### Gemini 3.5 Flash
+### Gemini 3.7 Flash
 
 Prompt should emphasize:
 

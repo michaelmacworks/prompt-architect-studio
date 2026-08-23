@@ -36,16 +36,16 @@ The API uses a hybrid engine:
 Environment variables:
 
 - `OPENAI_API_KEY` - required for provider-backed generation.
-- `OPENAI_MODEL` - optional; defaults to `gpt-5.5`.
+- `OPENAI_MODEL` - optional; defaults to `gpt-5.6`.
 
 Current target-model presets:
 
-- `GPT-5.5`
+- `GPT-5.6 Sol`
 - `Claude Fable 5`
-- `Claude Sonnet 4.6`
-- `Gemini 3.5 Flash`
+- `Claude Sonnet 5`
+- `Gemini 3.7 Flash`
 
-The API still accepts the older `Claude`, `Claude Opus 4.8`, `Gemini`, and `Gemini 3.1 Pro` labels as aliases so existing callers do not break.
+The API still accepts older labels such as `GPT-5.5`, `Claude`, `Claude Opus 4.8`, `Claude Sonnet 4.6`, `Gemini`, `Gemini 3.1 Pro`, and `Gemini 3.5 Flash` as aliases so existing callers do not break.
 
 ## Production Build
 

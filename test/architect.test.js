@@ -72,7 +72,7 @@ test("hybrid architect falls back to rule-based output without an API key", asyn
   const result = await architectPromptHybrid({
     roughPrompt: "Create an Instagram post for a candle sale, but do not mention pricing. Make it cozy.",
     framework: "Dynamic",
-    targetModel: "GPT-5.5",
+    targetModel: "GPT-5.6 Sol",
     includeMeta: true,
   });
 
@@ -207,7 +207,7 @@ test("hybrid architect uses provider output and repairs dropped constraints", as
       ok: true,
       status: 200,
       json: async () => ({
-        output_text: "# GPT-5.5 Execution Prompt\n\nCreate an Instagram post for the candle sale. Make it cozy.",
+        output_text: "# GPT-5.6 Sol Execution Prompt\n\nCreate an Instagram post for the candle sale. Make it cozy.",
       }),
     };
   };

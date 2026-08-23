@@ -38,7 +38,7 @@ Backend:
 Set these in Cloudflare Pages before using the model-backed engine:
 
 - `OPENAI_API_KEY` - required for OpenAI-backed prompt generation.
-- `OPENAI_MODEL` - optional; defaults to `gpt-5.5`.
+- `OPENAI_MODEL` - optional; defaults to `gpt-5.6`.
 
 If `OPENAI_API_KEY` is missing or the provider request fails, `/api/architect` returns the deterministic rule-based prompt instead of failing the user request.
 
