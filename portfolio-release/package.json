@@ -1,0 +1,19 @@
+{
+  "name": "prompt-architect-studio",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build-demo.mjs",
+    "test": "node --test test/*.test.js",
+    "preview": "node scripts/preview-demo.mjs",
+    "dev": "npm run build && npm run preview"
+  },
+  "dependencies": {
+    "react": "19.2.5",
+    "react-dom": "19.2.5"
+  },
+  "devDependencies": {
+    "esbuild-wasm": "0.25.0"
+  }
+}
